@@ -2436,9 +2436,10 @@ release manifest has no `INTERNET` permission.
 > display strings and stays Flutter-free), and `localizations_test` requires a
 > unique, non-generic name for every technique in both locales.
 > **Still open:** high-contrast theme, human playtests and the tuning they imply,
-> store screenshots/listing, signing keys (`key.properties` is never committed)
-> and the two-device manual run — the release build has not been produced yet.
-> `flutter analyze` clean, `flutter test` green (170 tests), `validate_puzzles`
+> store screenshots/listing and the two-device manual run. Android release
+> signing is configured (keystore and `key.properties` stay out of the repository)
+> and a signed release APK was verified on an emulator in airplane mode.
+> `flutter analyze` clean, `flutter test` green (175 tests), `validate_puzzles`
 > passes.
 
 **Estimated total:** ≈ 20–23 working days for the full version. A playable Easy game exists after Phase 3; all four difficulties after Phase 5.
@@ -2452,11 +2453,23 @@ release manifest has no `INTERNET` permission.
 - `AndroidManifest.xml`: set `android:label="UpSudoku"`; **do not add** the `INTERNET` permission.
 - Application ID such as `com.yourname.upsudoku`.
 - Create a keystore and `key.properties` for signing (never commit them).
+  Done: `android/key.properties` points at `android/app/upsudoku-release.keystore`
+  (alias `upsudoku`, PKCS12, 10 000 days); both are git-ignored. The release
+  build type uses `signingConfigs.release` read from that file, not the debug key.
+- `ndkVersion` is pinned to an installed NDK (28.2.13676358) because the release
+  build needs its `llvm-strip` to strip debug symbols from the Flutter libraries.
 
 ```bash
 flutter build apk --release            # .apk for direct install
 flutter build appbundle --release      # .aab for Google Play
 ```
+
+> `flutter build appbundle` verifies the bundle with `apkanalyzer`, which lives in
+> the `cmdline-tools` SDK package. On a machine without `cmdline-tools` the bundle
+> is produced and signed correctly but the command exits 1 with
+> "failed to strip debug symbols"; `cd android && ./gradlew bundleRelease` builds
+> the same AAB with exit 0. Install the package (`sdkmanager "cmdline-tools;latest"`)
+> to make the `flutter` command itself pass.
 
 ### 25.2 iOS (requires macOS + Xcode)
 
@@ -2490,13 +2503,17 @@ Run `dart run flutter_launcher_icons`.
 
 - [x] `flutter analyze` has no errors; `flutter test` is green.
 - [x] `dart run tool/validate_puzzles.dart` passes (unique solutions, tiers match).
-- [ ] Release build runs in airplane mode.
+- [x] Release build runs in airplane mode: the signed release APK was installed
+  on a Pixel-class API 34 emulator with airplane mode on (default network: none),
+  opened Home and started an Easy game without errors; the APK declares no
+  `INTERNET` permission.
 - [x] No leftover debug `print` calls (`avoid_print` is on; the asset generators
   in `up_sudoku/tool/` are command-line scripts, not app code).
 - [x] `ASSETS_LICENSE.md` lists audio/font/icon sources.
 - [ ] `BALANCING.md` records final difficulty numbers, pool sizes and playtest results.
-- [ ] Signed APK/AAB (`flutter build apk --release`, `flutter build appbundle --release`)
-  built with a keystore that stays out of the repository.
+- [x] Signed APK/AAB built with the release keystore that stays out of the
+  repository (`flutter build apk --release`; `./gradlew bundleRelease`, see 25.1
+  for the `cmdline-tools` caveat of the `flutter build appbundle` wrapper).
 - [ ] Manual run of section 21.5 on at least two real devices, in airplane mode.
 
 ---

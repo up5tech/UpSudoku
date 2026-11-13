@@ -236,7 +236,12 @@ dart run tool/validate_puzzles.dart
 dart run tool/measure_yield.dart 30 42
 
 flutter analyze && flutter test
+
+# Release builds are signed with the local keystore (android/key.properties +
+# android/app/upsudoku-release.keystore, both git-ignored). A fresh clone has
+# neither, so release builds need the keystore copied in first.
 flutter build apk --release
+flutter build appbundle --release   # needs the cmdline-tools SDK package
 ```
 
 `validate_puzzles.dart` checks per puzzle: format (81 chars, digits 0–9), solution is a valid full grid matching the givens, `countSolutions == 1`, tier matches the difficulty, givens in range and equal to `g`, no duplicates within the pool. Exits non-zero on failure.
@@ -280,7 +285,7 @@ Run `validate_puzzles.dart` whenever the grader or technique order changes — t
 | 5 | Tier 2 & 3 techniques, soundness test, full pools | ✅ |
 | 6 | Hints (3 stages + fallback), check board, scoring & stars | ✅ |
 | 7 | Persistence, stats, settings, daily puzzle | ✅ |
-| 8 | Polish, audio/haptics/theme/i18n, playtests, release | 🟡 audio, haptics, i18n, icon/splash done; high-contrast, playtests, signing open |
+| 8 | Polish, audio/haptics/theme/i18n, playtests, release | 🟡 audio, haptics, i18n, icon/splash, release signing done; high-contrast, playtests, store material open |
 
 Order matters: do not build UI polish before the puzzle pipeline and grader are correct — difficulty quality is the core value of this app.
 
