@@ -1,5 +1,9 @@
 import 'package:flutter_test/flutter_test.dart';
+import 'package:shared_preferences/shared_preferences.dart';
 import 'package:up_sudoku/controllers/game_controller.dart';
+import 'package:up_sudoku/controllers/stats_controller.dart';
+import 'package:up_sudoku/data/puzzle_repository.dart';
+import 'package:up_sudoku/data/storage_service.dart';
 import 'package:up_sudoku/domain/logic/logic_state.dart';
 import 'package:up_sudoku/domain/logic/technique.dart';
 import 'package:up_sudoku/domain/models/difficulty.dart';
@@ -86,6 +90,8 @@ int _wrongDigit(GameController game, int cell) {
 }
 
 void main() {
+  TestWidgetsFlutterBinding.ensureInitialized();
+
   late GameController game;
 
   setUp(() {
@@ -618,5 +624,154 @@ void main() {
 
     game.checkBoard();
     expect(game.checksUsed, 1);
+  });
+
+  group('persistence', () {
+    late StorageService storage;
+    late StatsController stats;
+
+    setUp(() async {
+      SharedPreferences.setMockInitialValues({});
+      storage = await StorageService.create();
+      stats = StatsController(storage: storage);
+    });
+
+    test('autosaves a move and restores it in a new controller', () async {
+      final repository = PuzzleRepository();
+      await repository.load();
+      final entry = repository.pool(Difficulty.easy).first;
+
+      final first = GameController(
+        repository: repository,
+        storage: storage,
+        stats: stats,
+      );
+      first.startGame(Difficulty.easy, specific: entry);
+      final empty = List<int>.generate(
+        81,
+        (i) => i,
+      ).firstWhere((i) => first.values[i] == 0);
+      first.select(empty);
+      first.inputDigit(entry.solution[empty]);
+      await pumpEventQueue();
+
+      final saved = storage.readGame(Difficulty.easy);
+      expect(saved, isNotNull);
+      expect(saved!.puzzleId, entry.id);
+      expect(saved.values[empty], entry.solution[empty]);
+
+      final second = GameController(
+        repository: repository,
+        storage: storage,
+        stats: stats,
+      );
+      expect(second.hasSaved(Difficulty.easy), isTrue);
+      expect(second.restore(Difficulty.easy), isTrue);
+      expect(second.entry.id, entry.id);
+      expect(second.values, first.values);
+      expect(second.notes, first.notes);
+      expect(second.canUndo, isFalse, reason: 'undo is not persisted');
+
+      first.dispose();
+      second.dispose();
+    });
+
+    test('a win clears the save and records the statistics', () async {
+      game = GameController(storage: storage, stats: stats);
+      game.startGame(Difficulty.easy, specific: _entry());
+
+      final solution = PuzzleEntry.decode(_solution);
+      for (var i = 0; i < kCellCount; i++) {
+        if (game.values[i] != 0) continue;
+        game.select(i);
+        game.inputDigit(solution[i]);
+      }
+      await pumpEventQueue();
+
+      expect(game.status, GameStatus.won);
+      expect(storage.readGame(Difficulty.easy), isNull);
+      expect(stats.of(Difficulty.easy).started, 1);
+      expect(stats.of(Difficulty.easy).completed, 1);
+      expect(stats.of(Difficulty.easy).bestTime, game.elapsedSeconds);
+      expect(stats.of(Difficulty.easy).completedIds, contains(_entry().id));
+    });
+
+    test('a loss clears the save and records the loss', () async {
+      game = GameController(storage: storage, stats: stats);
+      game.startGame(Difficulty.medium, specific: _entry(Difficulty.medium));
+
+      final empties = [
+        for (var i = 0; i < kCellCount; i++)
+          if (game.values[i] == 0) i,
+      ].take(5).toList();
+      for (final cell in empties) {
+        game.select(cell);
+        game.inputDigit(_wrongDigit(game, cell));
+      }
+      await pumpEventQueue();
+
+      expect(game.status, GameStatus.lost);
+      expect(storage.readGame(Difficulty.medium), isNull);
+      expect(stats.of(Difficulty.medium).started, 1);
+      expect(stats.of(Difficulty.medium).completed, 0);
+      expect(stats.of(Difficulty.medium).currentStreak, 0);
+    });
+
+    test('a pause stores the game', () async {
+      game = GameController(storage: storage, stats: stats);
+      game.startGame(Difficulty.easy, specific: _entry());
+      game.pause();
+      await pumpEventQueue();
+
+      expect(storage.readGame(Difficulty.easy), isNotNull);
+    });
+
+    test('completing the daily puzzle advances the daily streak', () async {
+      final today = DateTime.now();
+      game = GameController(storage: storage, stats: stats);
+      game.startGame(
+        Difficulty.easy,
+        specific: _entry(),
+        daily: true,
+        date: today,
+      );
+      expect(game.isDaily, isTrue);
+
+      final solution = PuzzleEntry.decode(_solution);
+      for (var i = 0; i < kCellCount; i++) {
+        if (game.values[i] != 0) continue;
+        game.select(i);
+        game.inputDigit(solution[i]);
+      }
+      await pumpEventQueue();
+
+      final daily = storage.readDaily();
+      expect(daily.isCompletedOn(today), isTrue);
+      expect(daily.streak, 1);
+    });
+
+    test('starting over a saved game resets the streak', () async {
+      final repository = PuzzleRepository();
+      await repository.load();
+      final entry = repository.pool(Difficulty.easy).first;
+      final controller = GameController(
+        repository: repository,
+        storage: storage,
+        stats: stats,
+      );
+
+      controller.startGame(Difficulty.easy, specific: entry);
+      stats.recordWon(
+        Difficulty.easy,
+        puzzleId: entry.id,
+        seconds: 60,
+        flawless: true,
+      );
+      expect(stats.of(Difficulty.easy).currentStreak, 1);
+
+      controller.startGame(Difficulty.easy, specific: entry);
+      expect(stats.of(Difficulty.easy).currentStreak, 0);
+      controller.dispose();
+    });
   });
 }

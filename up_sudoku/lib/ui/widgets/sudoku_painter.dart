@@ -26,6 +26,7 @@ class SudokuPainter extends CustomPainter {
     this.hintCell,
     this.highlightPeers = true,
     this.highlightSameDigit = true,
+    this.largeDigits = false,
     this.dark = false,
   });
 
@@ -65,14 +66,23 @@ class SudokuPainter extends CustomPainter {
   /// Whether cells with the same digit are highlighted.
   final bool highlightSameDigit;
 
+  /// Whether digits and notes are drawn larger (accessibility setting).
+  final bool largeDigits;
+
   /// Whether the dark theme is used.
   final bool dark;
 
   /// Ratio between the digit size and the cell size.
   static const double _digitRatio = 0.6;
 
+  /// Digit ratio when large digits are enabled.
+  static const double _largeDigitRatio = 0.7;
+
   /// Ratio between the note size and the cell size.
   static const double _noteRatio = 0.25;
+
+  /// Note ratio when large digits are enabled.
+  static const double _largeNoteRatio = 0.3;
 
   final Map<String, TextPainter> _textCache = {};
 
@@ -152,7 +162,7 @@ class SudokuPainter extends CustomPainter {
         : accent;
     final painter = _text(
       values[i].toString(),
-      cell * _digitRatio,
+      cell * (largeDigits ? _largeDigitRatio : _digitRatio),
       FontWeight.w700,
       color,
     );
@@ -171,7 +181,7 @@ class SudokuPainter extends CustomPainter {
     for (final d in digitsOf(notes[i])) {
       final painter = _text(
         d.toString(),
-        cell * _noteRatio,
+        cell * (largeDigits ? _largeNoteRatio : _noteRatio),
         FontWeight.w400,
         color,
       );

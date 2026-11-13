@@ -17,10 +17,21 @@ import '../widgets/sudoku_board.dart';
 
 /// Plays one puzzle of [difficulty].
 class GameScreen extends StatefulWidget {
-  const GameScreen({super.key, required this.difficulty});
+  const GameScreen({
+    super.key,
+    required this.difficulty,
+    this.daily = false,
+    this.forceNew = false,
+  });
 
   /// The difficulty to play.
   final Difficulty difficulty;
+
+  /// True when this is today's daily puzzle.
+  final bool daily;
+
+  /// True when "Play" was pressed: ignore any saved game and start fresh.
+  final bool forceNew;
 
   @override
   State<GameScreen> createState() => _GameScreenState();
@@ -69,9 +80,14 @@ class _GameScreenState extends State<GameScreen> {
     final finished =
         game.hasGame &&
         (game.status == GameStatus.won || game.status == GameStatus.lost);
-    if (!game.hasGame || game.cfg.id != widget.difficulty || finished) {
-      game.startGame(widget.difficulty);
+    if (game.hasGame && game.cfg.id == widget.difficulty && !finished) return;
+
+    if (!widget.forceNew &&
+        game.hasSaved(widget.difficulty) &&
+        game.restore(widget.difficulty)) {
+      return;
     }
+    game.startGame(widget.difficulty, daily: widget.daily);
   }
 
   void _startNewPuzzle() {
@@ -150,6 +166,10 @@ class _GameScreenState extends State<GameScreen> {
           mainAxisSize: MainAxisSize.min,
           children: [
             Text(game.cfg.label, style: TextStyle(color: accent)),
+            if (game.isDaily) ...[
+              const SizedBox(width: 6),
+              Icon(Icons.today, size: 18, color: accent),
+            ],
             const SizedBox(width: 12),
             GameTimer(elapsed: game.elapsed),
           ],

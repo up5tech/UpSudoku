@@ -269,7 +269,7 @@ Run `validate_puzzles.dart` whenever the grader or technique order changes — t
 | 4 | Notes, undo/redo, assist rules & feedback modes | ✅ |
 | 5 | Tier 2 & 3 techniques, soundness test, full pools | ✅ |
 | 6 | Hints (3 stages + fallback), check board, scoring & stars | ✅ |
-| 7 | Persistence, stats, settings, daily puzzle | ☐ |
+| 7 | Persistence, stats, settings, daily puzzle | ✅ |
 | 8 | Polish, audio/haptics/theme/i18n, playtests, release | ☐ |
 
 Order matters: do not build UI polish before the puzzle pipeline and grader are correct — difficulty quality is the core value of this app.

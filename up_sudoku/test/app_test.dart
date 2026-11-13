@@ -1,13 +1,21 @@
 import 'package:flutter_test/flutter_test.dart';
+import 'package:shared_preferences/shared_preferences.dart';
 import 'package:up_sudoku/app.dart';
 import 'package:up_sudoku/data/puzzle_repository.dart';
+import 'package:up_sudoku/data/storage_service.dart';
 
 void main() {
   testWidgets('app boots to the home screen', (tester) async {
-    await tester.pumpWidget(UpSudokuApp(repository: PuzzleRepository()));
+    SharedPreferences.setMockInitialValues({});
+    final storage = await StorageService.create();
+
+    await tester.pumpWidget(
+      UpSudokuApp(repository: PuzzleRepository(), storage: storage),
+    );
 
     expect(find.text('UpSudoku'), findsOneWidget);
     expect(find.text('Easy'), findsOneWidget);
     expect(find.text('Medium'), findsOneWidget);
+    expect(find.text('Daily puzzle'), findsOneWidget);
   });
 }

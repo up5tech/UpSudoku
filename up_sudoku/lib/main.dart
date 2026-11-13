@@ -2,6 +2,7 @@ import 'package:flutter/material.dart';
 
 import 'app.dart';
 import 'data/puzzle_repository.dart';
+import 'data/storage_service.dart';
 
 Future<void> main() async {
   WidgetsFlutterBinding.ensureInitialized();
@@ -10,5 +11,7 @@ Future<void> main() async {
   final repository = PuzzleRepository();
   await repository.load();
 
-  runApp(UpSudokuApp(repository: repository));
+  final storage = await StorageService.create();
+
+  runApp(UpSudokuApp(repository: repository, storage: storage));
 }

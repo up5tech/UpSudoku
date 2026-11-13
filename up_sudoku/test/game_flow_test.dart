@@ -1,9 +1,11 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:provider/provider.dart';
+import 'package:shared_preferences/shared_preferences.dart';
 import 'package:up_sudoku/app.dart';
 import 'package:up_sudoku/controllers/game_controller.dart';
 import 'package:up_sudoku/data/puzzle_repository.dart';
+import 'package:up_sudoku/data/storage_service.dart';
 import 'package:up_sudoku/domain/models/difficulty.dart';
 import 'package:up_sudoku/ui/screens/game_screen.dart';
 import 'package:up_sudoku/ui/widgets/number_pad.dart';
@@ -17,7 +19,12 @@ void main() {
     await repository.load();
     expect(repository.poolSize(Difficulty.easy), greaterThan(0));
 
-    await tester.pumpWidget(UpSudokuApp(repository: repository));
+    SharedPreferences.setMockInitialValues({});
+    final storage = await StorageService.create();
+
+    await tester.pumpWidget(
+      UpSudokuApp(repository: repository, storage: storage),
+    );
     await tester.pumpAndSettle();
 
     // Start an Easy game.

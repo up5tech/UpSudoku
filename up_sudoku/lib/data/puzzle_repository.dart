@@ -52,6 +52,26 @@ class PuzzleRepository {
     difficulty,
   ).firstWhere((p) => p.id == id);
 
+  /// The daily puzzle of [date].
+  ///
+  /// Deterministic from the device date alone: the weekday picks the
+  /// difficulty and the number of days since 2024-01-01 picks the index, so
+  /// every device shows the same puzzle on the same day without a server
+  /// (PLAN.md §19.4).
+  PuzzleEntry daily(DateTime date) {
+    final difficulty = dailyDifficulty(date);
+    final pool = this.pool(difficulty);
+    if (pool.isEmpty) {
+      throw StateError('No puzzle pool for ${difficulty.key}');
+    }
+    final day = DateTime.utc(
+      date.year,
+      date.month,
+      date.day,
+    ).difference(DateTime.utc(2024, 1, 1)).inDays;
+    return pool[day % pool.length];
+  }
+
   /// A random puzzle of [difficulty] that is not in [completed].
   ///
   /// Falls back to any puzzle when all of them have been completed.

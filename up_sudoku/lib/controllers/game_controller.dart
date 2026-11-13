@@ -7,27 +7,37 @@ import 'dart:math';
 import 'package:flutter/foundation.dart';
 
 import '../data/puzzle_repository.dart';
+import '../data/storage_service.dart';
 import '../domain/logic/grader.dart';
 import '../domain/logic/logic_state.dart';
 import '../domain/logic/logic_step.dart';
 import '../domain/logic/technique.dart';
 import '../domain/models/cell_change.dart';
+import '../domain/models/daily_record.dart';
 import '../domain/models/difficulty.dart';
 import '../domain/models/puzzle_entry.dart';
+import '../domain/models/saved_game.dart';
 import '../domain/score_calculator.dart';
 import '../domain/sudoku_constants.dart';
+import 'stats_controller.dart';
 
 /// Lifecycle of a game.
 enum GameStatus { playing, paused, won, lost }
 
 /// Holds the current game: board, notes, selection, undo history, hints,
-/// checks, timer and status.
-///
-/// Persistence is added in phase 7.
+/// checks, timer, status and the save slot of its difficulty.
 class GameController extends ChangeNotifier {
-  GameController({PuzzleRepository? repository}) : _repository = repository;
+  GameController({
+    PuzzleRepository? repository,
+    StorageService? storage,
+    StatsController? stats,
+  }) : _repository = repository,
+       _storage = storage,
+       _stats = stats;
 
   final PuzzleRepository? _repository;
+  final StorageService? _storage;
+  final StatsController? _stats;
   final Grader _grader = Grader.standard();
 
   /// Configuration of the running difficulty.
@@ -92,6 +102,12 @@ class GameController extends ChangeNotifier {
 
   /// Lifecycle state.
   GameStatus status = GameStatus.playing;
+
+  /// True when the running game is the daily puzzle.
+  bool isDaily = false;
+
+  /// Date (`yyyy-MM-dd`) of the running daily game, if any.
+  String? dailyDate;
 
   /// Neutral message shown when the board is full but not solved.
   final ValueNotifier<String?> notice = ValueNotifier<String?>(null);
@@ -171,13 +187,78 @@ class GameController extends ChangeNotifier {
         '$cells cell${cells == 1 ? '' : 's'}.';
   }
 
+  /// True when [difficulty] has a game that can be continued.
+  bool hasSaved(Difficulty difficulty) =>
+      _storage?.readGame(difficulty) != null;
+
+  /// Restores the saved game of [difficulty].
+  ///
+  /// Returns false when there is nothing (valid) to restore. The undo stack is
+  /// not persisted, so undo/redo start empty (PLAN.md §17.2).
+  bool restore(Difficulty difficulty) {
+    final saved = _storage?.readGame(difficulty);
+    if (saved == null) return false;
+
+    final PuzzleEntry restored;
+    try {
+      restored = _repository!.byId(difficulty, saved.puzzleId);
+    } catch (_) {
+      // The puzzle vanished from the pool: treat the save as unusable.
+      _storage!.clearGame(difficulty);
+      return false;
+    }
+
+    cfg = kDifficulties[difficulty]!;
+    entry = restored;
+    values = List<int>.of(saved.values);
+    given = [for (final v in entry.puzzle) v != 0];
+    notes = List<int>.of(saved.notes);
+    selected = null;
+    notesMode = false;
+    mistakes = saved.mistakes;
+    hintsLeft = saved.hintsLeft;
+    hintsUsed = saved.hintsUsed;
+    checksLeft = saved.checksLeft;
+    checksUsed = saved.checksUsed;
+    isDaily = saved.daily;
+    dailyDate = saved.dailyDate;
+    score = 0;
+    stars = 0;
+    elapsedSeconds = saved.elapsedSeconds;
+    elapsed.value = elapsedSeconds;
+    status = GameStatus.playing;
+    flagged.clear();
+    notice.value = null;
+    _clearHint();
+    _undo.clear();
+    _redo.clear();
+    _started = true;
+    _startTimer();
+    notifyListeners();
+    return true;
+  }
+
   /// Starts a new game on [difficulty].
   ///
-  /// When [specific] is null a puzzle is picked from the repository pool.
-  void startGame(Difficulty difficulty, {PuzzleEntry? specific}) {
+  /// When [specific] is null a puzzle is picked from the repository pool,
+  /// preferring one that has not been completed yet.
+  void startGame(
+    Difficulty difficulty, {
+    PuzzleEntry? specific,
+    bool daily = false,
+    DateTime? date,
+  }) {
+    final replacedUnfinished = _storage?.readGame(difficulty) != null;
     cfg = kDifficulties[difficulty]!;
     entry =
-        specific ?? _repository!.pick(difficulty, const <int>{}, Random());
+        specific ??
+        _repository!.pick(
+          difficulty,
+          _stats?.of(difficulty).completedIds.toSet() ?? const <int>{},
+          Random(),
+        );
+    isDaily = daily;
+    dailyDate = daily ? dayKey(date ?? DateTime.now()) : null;
     values = List<int>.of(entry.puzzle);
     given = [for (final v in entry.puzzle) v != 0];
     notes = List<int>.filled(kCellCount, 0);
@@ -199,7 +280,9 @@ class GameController extends ChangeNotifier {
     _redo.clear();
     elapsed.value = 0;
     _started = true;
+    _stats?.recordStarted(difficulty, abandoned: replacedUnfinished);
     _startTimer();
+    _autosave();
     notifyListeners();
   }
 
@@ -282,6 +365,7 @@ class GameController extends ChangeNotifier {
     if (!canAskHint) return;
     hintsLeft--;
     hintsUsed++;
+    _autosave();
     hintStage = 1;
     activeHint = null;
     hintCell = null;
@@ -372,6 +456,7 @@ class GameController extends ChangeNotifier {
     if (!canCheck) return;
     checksLeft--;
     checksUsed++;
+    _autosave();
     flagged.clear();
     for (var i = 0; i < kCellCount; i++) {
       if (given[i] || values[i] == 0) continue;
@@ -386,6 +471,7 @@ class GameController extends ChangeNotifier {
     status = GameStatus.paused;
     _timer?.cancel();
     _timer = null;
+    _autosave();
     notifyListeners();
   }
 
@@ -456,7 +542,30 @@ class GameController extends ChangeNotifier {
     _redo.clear();
     notice.value = null;
     _clearHint();
+    _autosave();
     notifyListeners();
+  }
+
+  /// Writes the current game into its difficulty's save slot.
+  void _autosave() {
+    final storage = _storage;
+    if (storage == null || !_started) return;
+    storage.writeGame(
+      cfg.id,
+      SavedGame(
+        puzzleId: entry.id,
+        values: List<int>.of(values),
+        notes: List<int>.of(notes),
+        elapsedSeconds: elapsedSeconds,
+        mistakes: mistakes,
+        hintsLeft: hintsLeft,
+        hintsUsed: hintsUsed,
+        checksLeft: checksLeft,
+        checksUsed: checksUsed,
+        daily: isDaily,
+        dailyDate: dailyDate,
+      ),
+    );
   }
 
   void _apply(List<CellChange> changes, {required bool undo}) {
@@ -527,8 +636,28 @@ class GameController extends ChangeNotifier {
       );
       score = scored.score;
       stars = scored.stars;
+      _stats?.recordWon(
+        cfg.id,
+        puzzleId: entry.id,
+        seconds: elapsedSeconds,
+        flawless: mistakes == 0 && hintsUsed == 0 && checksUsed == 0,
+      );
+      if (isDaily) _recordDaily();
+    } else if (result == GameStatus.lost) {
+      _stats?.recordLost(cfg.id);
     }
+    _storage?.clearGame(cfg.id);
     notifyListeners();
+  }
+
+  /// Marks today's daily puzzle as completed and advances the streak.
+  void _recordDaily() {
+    final storage = _storage;
+    if (storage == null) return;
+    final date = dailyDate != null
+        ? DateTime.tryParse(dailyDate!) ?? DateTime.now()
+        : DateTime.now();
+    storage.writeDaily(storage.readDaily().completedOn(date));
   }
 
   void _startTimer() {

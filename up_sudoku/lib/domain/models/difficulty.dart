@@ -19,6 +19,16 @@ enum Difficulty {
   };
 }
 
+/// Difficulty of the daily puzzle for [date] (PLAN.md §10.4).
+///
+/// Mon–Tue Easy, Wed Medium, Thu–Fri Hard, Sat–Sun Very Hard.
+Difficulty dailyDifficulty(DateTime date) => switch (date.weekday) {
+  DateTime.monday || DateTime.tuesday => Difficulty.easy,
+  DateTime.wednesday => Difficulty.medium,
+  DateTime.thursday || DateTime.friday => Difficulty.hard,
+  _ => Difficulty.veryHard,
+};
+
 /// How the game reacts to an incorrect digit.
 enum FeedbackMode {
   /// A wrong digit (≠ solution) is flagged immediately and counts as a mistake.

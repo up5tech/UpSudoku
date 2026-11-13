@@ -2323,9 +2323,29 @@ release manifest has no `INTERNET` permission.
 
 ### Phase 7 – Persistence, Stats, Settings, Daily (2–3 days)
 
-- [ ] `StorageService`, `StatsController`, `SettingsController`.
-- [ ] Autosave/restore per difficulty; Home with difficulty cards and Continue.
-- [ ] Stats, Settings and How-to-play screens; daily puzzle.
+- [x] `StorageService`, `StatsController`, `SettingsController`.
+- [x] Autosave/restore per difficulty; Home with difficulty cards and Continue.
+- [x] Stats, Settings and How-to-play screens; daily puzzle.
+
+> Implemented in `data/storage_service.dart`, `controllers/settings_controller.dart`,
+> `controllers/stats_controller.dart`, the models `saved_game.dart`,
+> `difficulty_stats.dart`, `settings.dart` and `daily_record.dart`, and the
+> screens `stats_screen.dart`, `settings_screen.dart` and
+> `how_to_play_screen.dart`.
+> Every change autosaves the difficulty's slot (and pause/backgrounding saves
+> too); winning or losing clears it. Restoring skips the undo stack by design.
+> Home shows Continue when a slot exists, best time and solved count, plus the
+> daily card (weekday difficulty, deterministic index, streak).
+> Settings persist sound, haptics, theme, peer/same-digit highlighting and
+> large digits plus "Reset data"; the highlight and large-digit options take
+> effect immediately, sound/haptics are wired for phase 8.
+> `flutter analyze` clean, `flutter test` green (146 tests), including storage
+> round-trips, corrupted-data fallbacks, the stats/streak rules, autosave and
+> restore, save clearing on win/loss, the daily streak and the daily puzzle
+> determinism.
+> Not verified: the new Home/Stats/Settings/How-to-play screens have not been
+> looked at on a device yet, and the restore flow has only been exercised in
+> tests, not by killing and relaunching the app.
 
 **Done when:** quitting and relaunching restores every difficulty's game, stats and settings.
 

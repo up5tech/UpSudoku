@@ -7,6 +7,7 @@ import 'package:flutter/material.dart';
 import 'package:provider/provider.dart';
 
 import '../../controllers/game_controller.dart';
+import '../../controllers/settings_controller.dart';
 import '../../core/theme.dart';
 import 'sudoku_painter.dart';
 
@@ -17,6 +18,7 @@ class SudokuBoard extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     final game = context.watch<GameController>();
+    final settings = context.watch<SettingsController>();
     final theme = Theme.of(context);
     final dark = theme.brightness == Brightness.dark;
 
@@ -53,6 +55,9 @@ class SudokuBoard extends StatelessWidget {
                     flagged: Set<int>.of(game.flagged),
                     hint: game.activeHint,
                     hintCell: game.hintCell,
+                    highlightPeers: settings.highlightPeers,
+                    highlightSameDigit: settings.highlightSameDigit,
+                    largeDigits: settings.largeDigits,
                     dark: dark,
                   ),
                 ),
