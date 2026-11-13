@@ -107,6 +107,7 @@ void main() {
       Size size, {
       double textScale = 1.0,
       required double minBoard,
+      double? maxGutter,
     }) async {
       tester.platformDispatcher.textScaleFactorTestValue = textScale;
       await tester.binding.setSurfaceSize(size);
@@ -117,6 +118,15 @@ void main() {
       final box = tester.getSize(find.byType(SudokuBoard));
       final side = math.min(box.width, box.height);
       expect(side, greaterThanOrEqualTo(minBoard), reason: reason);
+      // A wide pane that is much wider than the square board would leave empty
+      // gutters either side of it instead of giving the width to the controls.
+      if (maxGutter != null) {
+        expect(
+          box.width - side,
+          lessThanOrEqualTo(maxGutter),
+          reason: '$reason (gutter)',
+        );
+      }
 
       final pad = tester.getRect(find.byType(NumberPad));
       expect(pad.left, greaterThanOrEqualTo(0), reason: reason);
@@ -180,12 +190,14 @@ void main() {
       'landscape phone 844x390',
       const Size(844, 390),
       minBoard: 240,
+      maxGutter: 24,
     );
     await checkGameAt(
       'landscape phone 844x390 at 2x text',
       const Size(844, 390),
       textScale: 2,
       minBoard: 200,
+      maxGutter: 24,
     );
     await checkHintAt(
       'landscape phone 844x390 with a hint',
@@ -193,17 +205,21 @@ void main() {
       minBoard: 200,
       minPad: 200,
     );
+    // At 2x text the status row and the hint together use ~130 px of a 334 px
+    // body, so the pad lands at ~186 px: three rows of ~58 px, still above the
+    // 48 px touch target, while the board keeps its full height.
     await checkHintAt(
       'landscape phone 844x390 with a hint at 2x text',
       const Size(844, 390),
       textScale: 2,
       minBoard: 180,
-      minPad: 200,
+      minPad: 180,
     );
     await checkGameAt(
       'tablet 1024x768',
       const Size(1024, 768),
       minBoard: 400,
+      maxGutter: 24,
     );
     await checkGameAt(
       'tablet portrait 768x1024 at 2x text',

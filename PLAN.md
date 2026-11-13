@@ -2432,7 +2432,12 @@ release manifest has no `INTERNET` permission.
 > stays on screen. With a hint open the panel moves above the board instead of
 > into the control column: in the column it left the pad only 154 px at 2× text
 > (untappable rows), while the board can spare the height, so the landscape hint
-> cases assert both a ≥ 180 px board and a ≥ 200 px pad.
+> cases assert both a ≥ 180 px board and a ≥ 200 px pad. The two panes are sized
+> from the board itself: a square board only needs the body height, so the board
+> pane is `bodyHeight - toolbar + 2×12 px margin` and every remaining pixel goes
+> to the control column (`layout_test` fails if the board floats more than 24 px
+> of gutter on a wide screen). On a tablet that gives the board ~650 px and the
+> pad a ~330 px column with the pad centred vertically.
 > **Localized technique names** — hint headlines used the English names from the
 > domain's `kTechniqueName`, so a Vietnamese hint read "Naked Single". The table
 > moved to `AppLocalizations.techniqueName(Technique)` (the domain layer keeps no

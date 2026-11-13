@@ -40,8 +40,7 @@ class NumberPad extends StatelessWidget {
         final padHeight = math.min(constraints.maxHeight, constraints.maxWidth);
         final height = (padHeight - spacing * 2) / 3;
 
-        return Align(
-          alignment: Alignment.topCenter,
+        return Center(
           child: Column(
             mainAxisSize: MainAxisSize.min,
             children: [

@@ -306,22 +306,36 @@ class _GameScreenState extends State<GameScreen> {
                     );
 
               if (wide) {
-                final controlsWidth = (constraints.maxWidth * 0.42).clamp(
-                  280.0,
-                  420.0,
+                // The board is square, so its pane only needs the body height;
+                // every extra pixel of width belongs to the controls. Handing
+                // the board a wider pane would just centre it between gutters.
+                const toolbarHeight = 38.0;
+                const minControlsWidth = 280.0;
+                // 12 px of air on each side of the board, so the pane is the
+                // square plus that margin and nothing more.
+                const boardMargin = 12.0;
+                final boardPaneWidth =
+                    (constraints.maxHeight - toolbarHeight + boardMargin * 2)
+                        .clamp(
+                  constraints.maxWidth * 0.30,
+                  constraints.maxWidth - minControlsWidth,
                 );
-                // The hint goes above the board rather than into the control
-                // column: there it would squeeze the pad into untappable rows
-                // on a short screen, while the board can spare the height.
+                final controlsWidth = constraints.maxWidth - boardPaneWidth;
+
                 return Row(
                   children: [
-                    Expanded(
-                      child: Column(
-                        children: [
-                          if (hint != null) hint,
-                          const Expanded(child: SudokuBoard()),
-                          toolbar,
-                        ],
+                    SizedBox(
+                      width: boardPaneWidth,
+                      child: Padding(
+                        padding: const EdgeInsets.symmetric(
+                          horizontal: boardMargin,
+                        ),
+                        child: Column(
+                          children: [
+                            const Expanded(child: SudokuBoard()),
+                            toolbar,
+                          ],
+                        ),
                       ),
                     ),
                     SizedBox(
@@ -329,6 +343,9 @@ class _GameScreenState extends State<GameScreen> {
                       child: Column(
                         children: [
                           status,
+                          // The control column is wide enough in this layout for
+                          // the hint to stay on one line above the pad.
+                          if (hint != null) hint,
                           Expanded(
                             child: Padding(
                               padding: const EdgeInsets.fromLTRB(16, 4, 16, 16),
