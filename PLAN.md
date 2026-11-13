@@ -918,6 +918,8 @@ String _fileName(Difficulty d) => d == Difficulty.veryHard ? 'very_hard' : d.nam
 
 Run once per difficulty, e.g. `dart run tool/generate_puzzles.dart hard 200 42`. Commit the JSON files. Then run `tool/validate_puzzles.dart` (section 22).
 
+**Measured yield** of `PuzzleGenerator.generate()` (seed 42, `dart run tool/measure_yield.dart 30 42`): **1.1 attempts/puzzle (Easy), 89.3 (Medium), 33.8 (Hard), 43.0 (Very Hard)** — 0.6 / 17.1 / 21.5 / 36.5 ms per accepted puzzle. A dig is cheap, so the whole set (200/200/200/120) fills in seconds. Do **not** use the older 0 %/90 % figures: those graded once after digging and no longer describe the generator.
+
 ### 10.4 Runtime Loading
 
 ```dart
@@ -2120,7 +2122,11 @@ Run it in every release build and whenever the grader changes (**changing a tech
 
 ### 22.2 Distribution Report
 
-For each difficulty, print: pool size, givens distribution (min/median/max), technique usage histogram, average and maximum `score`. Check:
+`dart run tool/measure_yield.dart [samples] [seed]` prints, per difficulty: puzzles produced vs samples, attempts per puzzle, ms per puzzle, givens distribution (min/median/max), `score` distribution and the technique usage histogram of accepted puzzles. `validate_puzzles.dart` prints the same distributions for the committed pools.
+
+Measured acceptance (seed 42, 30 samples, budget 200 attempts): Easy 1.1, Medium 89.3, Hard 33.8, Very Hard 43.0 attempts per accepted puzzle; tier distribution of accepted puzzles is 100 % the target tier for every difficulty. Older “0 % for Medium/Hard” notes measured dig-then-grade-once and are wrong for the current generator.
+
+Check:
 
 - Easy puzzles contain **only** singles.
 - Medium puzzles include at least one tier-2 step; Hard at least one tier-3 step; Very Hard are stuck after tier 3.
@@ -2205,15 +2211,19 @@ release manifest has no `INTERNET` permission.
 > 38–45, score 36–43) — every gate of §22.1 passes.
 > `flutter analyze` clean, `flutter test` green (49 tests).
 >
-> **Acceptance rate with tier-1 grading only** (`tool/measure_yield.dart`,
-> 100 samples/difficulty): Easy 90% solved by singles / 0% stuck / 10% out of
-> range; Medium 87% / 4% / 9%; Hard 76% / 22% / 2%; Very Hard 19% / 14% / 67%.
-> Conclusions for phase 5:
-> - Medium and Hard need the tier 2/3 techniques to be graded correctly —
->   almost nothing falls into "stuck" today.
-> - Very Hard: symmetric digging only reaches ~24–31 givens, i.e. the
->   22–26 window is mostly unreachable (67% out of range). Phase 5 must dig
->   asymmetrically (or dig further) for the Very Hard pool.
+> **Historical acceptance measurement (superseded):** with tier-1 grading only
+> and grading once after digging, 100 samples/difficulty gave Easy 90% solved by
+> singles / 0% stuck / 10% out of range; Medium 87/4/9; Hard 76/22/2; Very Hard
+> 19/14/67. That method is **not** what `PuzzleGenerator.generate()` does and
+> those percentages must not be quoted as the generator's yield.
+>
+> **Current generator yield** (phase 5, `tool/measure_yield.dart` measuring
+> `generate()` itself): **1.1 attempts/puzzle Easy, 89.3 Medium, 33.8 Hard,
+> 43.0 Very Hard** (0.6 / 17.1 / 21.5 / 36.5 ms per accepted puzzle). Phase 5
+> conclusions that still hold:
+> - Medium and Hard need the tier 2/3 techniques to be graded correctly.
+> - Very Hard needs `generate()`'s re-grading while digging; symmetric digging
+>   alone lands mostly outside the 22–26 window.
 > - Easy yield is high, so the pool can be regenerated cheaply.
 
 ### Phase 3 – Playable Prototype on Easy (3 days)
@@ -2278,6 +2288,10 @@ release manifest has no `INTERNET` permission.
 > Distribution (per pool, technique uses): Easy singles only; Medium adds
 > pointing/box-line/pairs; Hard adds X-Wing/XY-Wing/XYZ-Wing/Swordfish;
 > Very Hard is any puzzle the tiers 1–3 grader cannot finish.
+> Measured generator acceptance (`tool/measure_yield.dart`, seed 42):
+> **1.1 / 89.3 / 33.8 / 43.0 attempts per accepted puzzle** for Easy / Medium /
+> Hard / Very Hard — the earlier “0 % Medium/Hard” figure was dig-then-grade-once
+> and no longer describes `generate()`.
 
 **Done when:** `validate_puzzles.dart` passes for all four pools.
 

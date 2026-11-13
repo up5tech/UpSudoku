@@ -58,7 +58,8 @@ up_sudoku/
 │  ├─ images/, fonts/
 ├─ tool/
 │  ├─ generate_puzzles.dart    # builds + grades pools
-│  └─ validate_puzzles.dart    # enforces the quality gates
+│  ├─ validate_puzzles.dart    # enforces the quality gates
+│  └─ measure_yield.dart       # real generate() yield + pool distribution
 ├─ lib/
 │  ├─ main.dart, app.dart
 │  ├─ core/{constants.dart,theme.dart}
@@ -222,6 +223,9 @@ dart run tool/generate_puzzles.dart very_hard 150 42
 # Quality gates — MUST pass before any release
 dart run tool/validate_puzzles.dart
 
+# Yield + pool distribution report
+dart run tool/measure_yield.dart 30 42
+
 flutter analyze && flutter test
 flutter build apk --release
 ```
@@ -229,6 +233,15 @@ flutter build apk --release
 `validate_puzzles.dart` checks per puzzle: format (81 chars, digits 0–9), solution is a valid full grid matching the givens, `countSolutions == 1`, tier matches the difficulty, givens in range and equal to `g`, no duplicates within the pool. Exits non-zero on failure.
 
 Run `validate_puzzles.dart` whenever the grader or technique order changes — the whole pool must be re-graded.
+
+**Measured generator yield** (`dart run tool/measure_yield.dart 30 42`, which calls `PuzzleGenerator.generate()` with its re-grading while digging):
+
+| | Easy | Medium | Hard | Very Hard |
+|---|---|---|---|---|
+| attempts per accepted puzzle | 1.1 | 89.3 | 33.8 | 43.0 |
+| ms per accepted puzzle | 0.6 | 17.1 | 21.5 | 36.5 |
+
+> ⚠️ Do **not** quote 0 % acceptance for Medium/Hard or “90/87/76/19 %” from older notes. Those came from digging to the target and grading **once at the end**, which is not what `PuzzleGenerator.generate()` does; it re-grades after every removal and stops at the first puzzle of the required tier. `measure_yield.dart` measures the real `generate()` path — if a report disagrees with the table above, the generator changed and the table must be re-measured, not the other way round.
 
 ---
 
