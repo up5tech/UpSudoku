@@ -81,18 +81,38 @@ void main() {
       }
     });
 
-    test('returns null for tiers that are not implemented yet', () {
-      // Tiers 2–4 need the techniques of PLAN.md phase 5; generating them now
-      // would produce puzzles that are mislabelled.
-      final rng = Random(42);
-      for (final difficulty in [
-        Difficulty.medium,
-        Difficulty.hard,
-        Difficulty.veryHard,
-      ]) {
+    test('produces Medium and Hard puzzles at their tier', () {
+      final grader = Grader.standard();
+      final rng = Random(7);
+
+      for (final difficulty in [Difficulty.medium, Difficulty.hard]) {
         final cfg = kDifficulties[difficulty]!;
-        expect(PuzzleGenerator.generate(cfg, rng, maxAttempts: 5), isNull);
+        final entry = PuzzleGenerator.generate(cfg, rng, maxAttempts: 300);
+        expect(entry, isNotNull, reason: 'no $difficulty puzzle generated');
+
+        expect(entry!.givens, greaterThanOrEqualTo(cfg.minGivens));
+        expect(entry.givens, lessThanOrEqualTo(cfg.maxGivens));
+        expect(SudokuSolver.countSolutions(entry.puzzle, limit: 2), 1);
+        expect(grader.grade(entry.puzzle).tier, cfg.tier);
       }
-    });
+    }, timeout: const Timeout(Duration(minutes: 2)));
+
+    test('produces a Very Hard puzzle the grader cannot finish', () {
+      final cfg = kDifficulties[Difficulty.veryHard]!;
+      final grader = Grader.standard();
+      final entry = PuzzleGenerator.generate(
+        cfg,
+        Random(11),
+        maxAttempts: 600,
+      );
+
+      expect(entry, isNotNull, reason: 'no Very Hard puzzle generated');
+      expect(entry!.givens, inInclusiveRange(cfg.minGivens, cfg.maxGivens));
+      expect(SudokuSolver.countSolutions(entry.puzzle, limit: 2), 1);
+
+      final grade = grader.grade(entry.puzzle);
+      expect(grade.tier, 4);
+      expect(grade.solvedLogically, isFalse);
+    }, timeout: const Timeout(Duration(minutes: 4)));
   });
 }

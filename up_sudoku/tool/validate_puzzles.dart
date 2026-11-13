@@ -10,6 +10,7 @@ import 'dart:convert';
 import 'dart:io';
 
 import 'package:up_sudoku/domain/logic/grader.dart';
+import 'package:up_sudoku/domain/logic/technique.dart';
 import 'package:up_sudoku/domain/models/difficulty.dart';
 import 'package:up_sudoku/domain/models/puzzle_entry.dart';
 import 'package:up_sudoku/domain/solver.dart';
@@ -58,6 +59,7 @@ int _validatePool(Difficulty difficulty) {
   final seen = <String>{};
   final givensList = <int>[];
   final scores = <int>[];
+  final usage = <Technique, int>{};
   var failures = 0;
 
   for (final p in raw) {
@@ -118,6 +120,7 @@ int _validatePool(Difficulty difficulty) {
     if (problems.isEmpty) {
       givensList.add(givens);
       scores.add(entry.score);
+      grade.usage.forEach((t, c) => usage[t] = (usage[t] ?? 0) + c);
     } else {
       failures++;
       stdout.writeln('  ✗ puzzle ${entry.id}: ${problems.join('; ')}');
@@ -132,6 +135,13 @@ int _validatePool(Difficulty difficulty) {
       '(median ${givensList[givensList.length ~/ 2]})  '
       'score: ${scores.first}..${scores.last} '
       '(median ${scores[scores.length ~/ 2]})',
+    );
+    // Distribution report (PLAN.md §22.2): which techniques the pool needs.
+    final ranked = usage.entries.toList()
+      ..sort((a, b) => b.value.compareTo(a.value));
+    stdout.writeln(
+      '  techniques: '
+      '${ranked.map((e) => '${e.key.name}x${e.value}').join(', ')}',
     );
   }
   stdout.writeln(failures == 0 ? '  ✓ all gates passed' : '  $failures puzzle(s) failed');

@@ -91,9 +91,9 @@ up_sudoku/
 ### Generator
 1. Random full grid via `solve(empty, rng: rng)`.
 2. Dig holes in random order (with 180° rotational symmetry), keeping the puzzle uniquely solvable.
-3. Stop at a target givens count.
-4. Grade; accept only if tier matches and givens are in range.
-5. Optionally re-grade after each removal and stop as soon as the target tier is reached (much better yield for Hard/Very Hard).
+3. Stop at a target givens count (random inside the difficulty's range).
+4. Re-grade after each removal once givens are in range; accept the first puzzle with the target tier and givens ≤ target.
+5. Retry with a new solution until the pool is full. This re-grading is what makes Medium/Hard/Very Hard feasible (grading only once, after digging, yields ~0 %).
 
 ### Logic solver
 - `LogicState`: `values` (0 = empty) + `cand` (bitmask per cell).
@@ -254,7 +254,7 @@ Run `validate_puzzles.dart` whenever the grader or technique order changes — t
 | 2 | Generator + tier-1 grader; first Easy pool | ✅ |
 | 3 | Playable prototype on Easy (repo, controller, painter, pad, timer) | ✅ |
 | 4 | Notes, undo/redo, assist rules & feedback modes | ✅ |
-| 5 | Tier 2 & 3 techniques, soundness test, full pools | ☐ |
+| 5 | Tier 2 & 3 techniques, soundness test, full pools | ✅ |
 | 6 | Hints (3 stages + fallback), check board, scoring & stars | ☐ |
 | 7 | Persistence, stats, settings, daily puzzle | ☐ |
 | 8 | Polish, audio/haptics/theme/i18n, playtests, release | ☐ |

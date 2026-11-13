@@ -19,12 +19,9 @@ const _stuckSolution =
 void main() {
   final grader = Grader.standard();
 
-  test('the standard grader only implements tier 1 for now', () {
-    expect(grader.maxTier, 1);
-    expect(grader.techniques.map((t) => t.id), [
-      Technique.nakedSingle,
-      Technique.hiddenSingle,
-    ]);
+  test('the standard grader implements tiers 1–3 in the frozen order', () {
+    expect(grader.maxTier, 3);
+    expect(grader.techniques.map((t) => t.id), kTechniqueOrder);
   });
 
   test('grading is deterministic', () {

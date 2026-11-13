@@ -55,6 +55,12 @@ class PuzzleGenerator {
   ///
   /// A puzzle is only accepted when it is uniquely solvable, has its givens
   /// inside the configured range and is graded exactly at the tier of [cfg].
+  ///
+  /// Holes are dug one at a time and the puzzle is re-graded as soon as its
+  /// givens count enters the configured range; digging stops at the first
+  /// puzzle that already has the required tier (PLAN.md §10.1 step 5). This
+  /// is what makes Medium/Hard/Very Hard feasible: grading only after digging
+  /// all the way to the minimum givens would almost always miss the tier.
   static PuzzleEntry? generate(
     DifficultyConfig cfg,
     Random rng, {
@@ -66,24 +72,61 @@ class PuzzleGenerator {
 
     for (var attempt = 0; attempt < maxAttempts; attempt++) {
       final solution = SudokuSolver.solve(List.filled(kCellCount, 0), rng: rng)!;
-      final target =
-          cfg.minGivens + rng.nextInt(cfg.maxGivens - cfg.minGivens + 1);
-      final puzzle = dig(solution, target, rng);
-
-      final givens = puzzle.where((v) => v != 0).length;
-      if (givens < cfg.minGivens || givens > cfg.maxGivens) continue;
-
-      final grade = grader.grade(puzzle);
-      if (grade.tier != cfg.tier) continue;
+      final dug = _digWithGrade(solution, cfg, rng, grader);
+      if (dug == null) continue;
 
       return PuzzleEntry(
         id: id,
         difficulty: cfg.id,
-        puzzle: puzzle,
+        puzzle: dug.puzzle,
         solution: solution,
-        givens: givens,
-        score: grade.score,
+        givens: dug.puzzle.where((v) => v != 0).length,
+        score: dug.grade.score,
       );
+    }
+    return null;
+  }
+
+  /// Digs holes from [solution], grading whenever the givens count is inside
+  /// the range of [cfg], and returns the first puzzle of the required tier.
+  static _Dug? _digWithGrade(
+    List<int> solution,
+    DifficultyConfig cfg,
+    Random rng,
+    Grader grader,
+  ) {
+    final puzzle = List<int>.of(solution);
+    final order = List<int>.generate(kCellCount, (i) => i)..shuffle(rng);
+    // Dig towards a random target inside the range so the pooled puzzles are
+    // spread over the whole givens band instead of all sitting at its top.
+    final target =
+        cfg.minGivens + rng.nextInt(cfg.maxGivens - cfg.minGivens + 1);
+    var givens = kCellCount;
+
+    for (final i in order) {
+      if (givens <= cfg.minGivens) break;
+      if (puzzle[i] == 0) continue;
+
+      final j = kCellCount - 1 - i;
+      final cells = <int>{i, j};
+      final saved = {for (final c in cells) c: puzzle[c]};
+      for (final c in cells) {
+        puzzle[c] = 0;
+      }
+
+      if (SudokuSolver.countSolutions(puzzle, limit: 2) != 1) {
+        saved.forEach((c, v) => puzzle[c] = v); // undo
+        continue;
+      }
+
+      givens -= saved.values.where((v) => v != 0).length;
+      if (givens < cfg.minGivens) return null; // symmetric removal overshot
+      if (givens > cfg.maxGivens) continue;
+
+      final grade = grader.grade(puzzle);
+      if (grade.tier == cfg.tier && givens <= target) {
+        return _Dug(List<int>.of(puzzle), grade);
+      }
     }
     return null;
   }
@@ -95,4 +138,12 @@ class PuzzleGenerator {
     if (tier <= 3) return tier <= grader.maxTier;
     return grader.maxTier >= 3;
   }
+}
+
+/// A dug puzzle together with the grade that accepted it.
+class _Dug {
+  final List<int> puzzle;
+  final GradeResult grade;
+
+  const _Dug(this.puzzle, this.grade);
 }

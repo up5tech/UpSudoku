@@ -775,8 +775,8 @@ class _Search {
 
 1. **Random full grid:** `SudokuSolver.solve(emptyGrid, rng: rng)`.
 2. **Dig holes:** visit cells in random order and remove a cell (and optionally its 180° rotational partner) only if the puzzle **still has exactly one solution**.
-3. Stop at a **target number of givens** (random inside the difficulty's range) or when no more cells can be removed.
-4. **Grade** the result with the logic grader (section 11) and accept it only if the tier matches the target difficulty and givens are in range.
+3. Pick a **target number of givens** at random inside the difficulty's range and stop digging there (or when no more cells can be removed).
+4. **Re-grade after every successful removal** once the givens count is inside the range, and accept the first puzzle whose tier matches and whose givens are ≤ the target. Grading only once, after digging all the way down, almost never hits Medium/Hard: measured yield was 0 % for both.
 5. Repeat until the pool is full.
 
 > Reference: the smallest number of givens that can give a unique 9×9 Sudoku is 17, so the Very Hard range (22–26) is well above the theoretical minimum and reachable.
@@ -858,7 +858,7 @@ class PuzzleGenerator {
 }
 ```
 
-**Efficiency improvement (recommended once it works):** instead of digging to the target and grading once, **re-grade after each successful removal** and stop as soon as the puzzle reaches the desired tier (and givens are in range). Because removing clues generally makes puzzles harder, this raises the yield for Hard/Very Hard.
+**Efficiency improvement (implemented):** instead of digging to the target and grading once, `PuzzleGenerator._digWithGrade` re-grades after each successful removal and stops as soon as the puzzle reaches the desired tier (and givens are in range). Because removing clues generally makes puzzles harder, this raises the yield enormously: with the full grader a 200-puzzle Medium pool takes ~3 s and 200 Hard puzzles ~4 s; 120 Very Hard puzzles took ~5 s with seed 42.
 
 **Yield caveat:** many random puzzles will not match the requested tier (especially Very Hard). Measure the acceptance rate for each difficulty during Phase 2 and let the generation script run longer (or overnight) for Very Hard; do not lower the tier standard to hit a pool size.
 
@@ -2258,11 +2258,26 @@ release manifest has no `INTERNET` permission.
 
 ### Phase 5 – Tier 2 & 3 Techniques and Full Pools (4–5 days)
 
-- [ ] Implement tier-2 techniques (pointing, box/line, pairs, triples) with unit tests.
-- [ ] Implement tier-3 techniques (quads, X-Wing, Swordfish, XY-Wing, XYZ-Wing) with unit tests.
-- [ ] Soundness test (section 21.3).
-- [ ] Generate and validate pools: Medium, Hard, Very Hard (leave long runs overnight).
-- [ ] Distribution report (22.2).
+- [x] Implement tier-2 techniques (pointing, box/line, pairs, triples) with unit tests.
+- [x] Implement tier-3 techniques (quads, X-Wing, Swordfish, XY-Wing, XYZ-Wing) with unit tests.
+- [x] Soundness test (section 21.3).
+- [x] Generate and validate pools: Medium, Hard, Very Hard (leave long runs overnight).
+- [x] Distribution report (22.2).
+
+> Techniques live in `subsets.dart` (naked/hidden 2–4), `intersections.dart`
+> (pointing, box/line), `fish.dart` (X-Wing, Swordfish) and `wings.dart`
+> (XY/XYZ-Wing); the frozen order in `technique.dart` is unchanged. Every
+> technique returns a step only when it removes or places something, and the
+> grader trips on a no-progress step instead of looping.
+> Pools: Easy 200, Medium 200, Hard 200, Very Hard 120 — all pass
+> `validate_puzzles.dart` (unique solution, valid grid, tier match, givens in
+> range, no duplicates). The generator now re-grades while digging (10.1).
+> `flutter test` green (100 tests); the soundness test replays 120 puzzles
+> dug to 24–40 givens and checks every placement and elimination against the
+> known solution.
+> Distribution (per pool, technique uses): Easy singles only; Medium adds
+> pointing/box-line/pairs; Hard adds X-Wing/XY-Wing/XYZ-Wing/Swordfish;
+> Very Hard is any puzzle the tiers 1–3 grader cannot finish.
 
 **Done when:** `validate_puzzles.dart` passes for all four pools.
 

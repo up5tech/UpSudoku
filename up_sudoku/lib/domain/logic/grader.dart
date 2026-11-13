@@ -3,10 +3,14 @@
 /// Pure Dart — no Flutter imports allowed in the domain layer.
 library;
 
+import 'fish.dart';
+import 'intersections.dart';
 import 'logic_state.dart';
 import 'logic_step.dart';
 import 'singles.dart';
+import 'subsets.dart';
 import 'technique.dart';
+import 'wings.dart';
 
 /// The outcome of grading a puzzle.
 class GradeResult {
@@ -36,10 +40,11 @@ class Grader {
 
   Grader(this.techniques);
 
-  /// The standard grader: tier 1 techniques only for now.
+  /// The standard grader: every implemented technique, in the frozen order
+  /// of [kTechniqueOrder].
   ///
-  /// Tiers 2 and 3 are added in PLAN.md phase 5, in the frozen order of
-  /// [kTechniqueOrder]. Adding them requires re-grading the whole pool.
+  /// Changing the order or a technique requires re-grading the whole pool
+  /// (PLAN.md §11.4).
   factory Grader.standard() => Grader(buildStandardTechniques());
 
   /// The highest tier any technique of this grader implements.
@@ -53,8 +58,15 @@ class Grader {
     final usage = <Technique, int>{};
     var maxTier = 1;
     var score = 0;
+    var guard = 0;
 
     while (!s.solved) {
+      if (++guard > 1000) {
+        // Defensive: a technique that returns a step making no progress
+        // would loop forever. Trip loudly instead of hanging the app.
+        throw StateError('Grader did not make progress — check a technique');
+      }
+
       LogicStep? step;
       SolveTechnique? used;
       for (final t in techniques) {
@@ -67,6 +79,9 @@ class Grader {
       if (step == null || used == null) {
         // Stuck: needs something beyond the implemented techniques.
         return GradeResult(4, false, usage, score);
+      }
+      if (!step.isPlacement && step.eliminations.isEmpty) {
+        throw StateError('Technique ${used.id} proposed an empty step');
       }
       step.applyTo(s);
       if (s.hasContradiction) {
@@ -100,12 +115,23 @@ class Grader {
 /// Builds the standard technique list, respecting the frozen order of
 /// [kTechniqueOrder].
 ///
-/// Only implemented techniques are included; the tiers 2 and 3 techniques are
-/// added in PLAN.md phase 5 and require re-grading the whole pool.
+/// Every technique of tiers 1–3 is registered here.
 List<SolveTechnique> buildStandardTechniques() {
   final registry = <Technique, SolveTechnique Function()>{
     Technique.nakedSingle: NakedSingle.new,
     Technique.hiddenSingle: HiddenSingle.new,
+    Technique.nakedPair: NakedPair.new,
+    Technique.hiddenPair: HiddenPair.new,
+    Technique.nakedTriple: NakedTriple.new,
+    Technique.hiddenTriple: HiddenTriple.new,
+    Technique.pointing: Pointing.new,
+    Technique.boxLine: BoxLine.new,
+    Technique.nakedQuad: NakedQuad.new,
+    Technique.hiddenQuad: HiddenQuad.new,
+    Technique.xWing: XWing.new,
+    Technique.swordfish: Swordfish.new,
+    Technique.xyWing: XYWing.new,
+    Technique.xyzWing: XYZWing.new,
   };
 
   return [
