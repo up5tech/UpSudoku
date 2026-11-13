@@ -2191,12 +2191,30 @@ release manifest has no `INTERNET` permission.
 
 ### Phase 2 – Generator & Singles Grader (2–3 days)
 
-- [ ] `PuzzleGenerator.dig` and `generate` (symmetric digging).
-- [ ] `LogicState`, `LogicStep`, `NakedSingle`, `HiddenSingle`, `Grader`.
-- [ ] Measure the acceptance rate per difficulty with only tier-1 grading (Easy works; others fall into "stuck").
-- [ ] First pool: 50 Easy puzzles.
+- [x] `PuzzleGenerator.dig` and `generate` (symmetric digging).
+- [x] `LogicState`, `LogicStep`, `NakedSingle`, `HiddenSingle`, `Grader`.
+- [x] Measure the acceptance rate per difficulty with only tier-1 grading (Easy works; others fall into "stuck").
+- [x] First pool: 50 Easy puzzles.
 
 **Done when:** Easy puzzles are generated, graded tier 1, and validated.
+
+> Status: implemented in `lib/domain/logic/` (`logic_state.dart`, `logic_step.dart`,
+> `technique.dart`, `singles.dart`, `grader.dart`) and `lib/domain/generator.dart`,
+> with the tools `tool/generate_puzzles.dart`, `tool/validate_puzzles.dart` and
+> `tool/measure_yield.dart`. Pool: `assets/puzzles/easy.json` (50 puzzles, givens
+> 38–45, score 36–43) — every gate of §22.1 passes.
+> `flutter analyze` clean, `flutter test` green (49 tests).
+>
+> **Acceptance rate with tier-1 grading only** (`tool/measure_yield.dart`,
+> 100 samples/difficulty): Easy 90% solved by singles / 0% stuck / 10% out of
+> range; Medium 87% / 4% / 9%; Hard 76% / 22% / 2%; Very Hard 19% / 14% / 67%.
+> Conclusions for phase 5:
+> - Medium and Hard need the tier 2/3 techniques to be graded correctly —
+>   almost nothing falls into "stuck" today.
+> - Very Hard: symmetric digging only reaches ~24–31 givens, i.e. the
+>   22–26 window is mostly unreachable (67% out of range). Phase 5 must dig
+>   asymmetrically (or dig further) for the Very Hard pool.
+> - Easy yield is high, so the pool can be regenerated cheaply.
 
 ### Phase 3 – Playable Prototype on Easy (3 days)
 
