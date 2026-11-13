@@ -16,6 +16,7 @@ import 'package:up_sudoku/ui/screens/game_screen.dart';
 import 'package:up_sudoku/ui/screens/how_to_play_screen.dart';
 import 'package:up_sudoku/ui/screens/settings_screen.dart';
 import 'package:up_sudoku/ui/screens/stats_screen.dart';
+import 'package:up_sudoku/ui/widgets/game_toolbar.dart';
 import 'package:up_sudoku/ui/widgets/hint_panel.dart';
 import 'package:up_sudoku/ui/widgets/number_pad.dart';
 import 'package:up_sudoku/ui/widgets/sudoku_board.dart';
@@ -125,6 +126,13 @@ void main() {
           box.width - side,
           lessThanOrEqualTo(maxGutter),
           reason: '$reason (gutter)',
+        );
+        // The wide layout derives the pane width from this height, so the bar
+        // must really be that tall (it scales down instead of wrapping).
+        expect(
+          tester.getSize(find.byType(GameToolbar)).height,
+          kCompactToolbarHeight,
+          reason: '$reason (toolbar height)',
         );
       }
 

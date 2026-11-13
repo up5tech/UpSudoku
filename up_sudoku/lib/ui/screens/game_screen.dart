@@ -309,14 +309,17 @@ class _GameScreenState extends State<GameScreen> {
                 // The board is square, so its pane only needs the body height;
                 // every extra pixel of width belongs to the controls. Handing
                 // the board a wider pane would just centre it between gutters.
-                const toolbarHeight = 38.0;
+                // The bar is compact in this layout and therefore exactly
+                // [kCompactToolbarHeight] tall; that measurement is the single
+                // source of the board pane size.
                 const minControlsWidth = 280.0;
                 // 12 px of air on each side of the board, so the pane is the
                 // square plus that margin and nothing more.
                 const boardMargin = 12.0;
-                final boardPaneWidth =
-                    (constraints.maxHeight - toolbarHeight + boardMargin * 2)
-                        .clamp(
+                final boardPaneWidth = (constraints.maxHeight -
+                        kCompactToolbarHeight +
+                        boardMargin * 2)
+                    .clamp(
                   constraints.maxWidth * 0.30,
                   constraints.maxWidth - minControlsWidth,
                 );
