@@ -204,7 +204,7 @@ Required coverage:
 - `solver_test` — known example puzzle solves, has exactly 1 solution, empty grid has >1, contradictory givens → 0.
 - `generator_test` — fixed seeds, ≥10 puzzles per difficulty: unique solution, givens in range, solution matches givens, tier matches.
 - `techniques_test` — per technique, hand-built `LogicState`s; assert both the step found and the exact eliminations.
-- **Soundness test (critical)** — over ~200 generated puzzles of all tiers: at every grader step, the placed digit equals the solution digit and **no eliminated candidate equals the solution digit** of that cell.
+- **Soundness test (critical)** — over ~160 generated puzzles of all tiers: at every grader step, the placed digit equals the solution digit and **no eliminated candidate equals the solution digit** of that cell. The run must also fail unless it actually exercised a tier-2 and a tier-3 technique, so fish/wing eliminations cannot silently stop being covered.
 - `grader_test` — determinism; stuck puzzle → tier 4 + `solvedLogically == false` while the backtracking solver still finds its unique solution.
 - `transformer_test` — transformed puzzle still uniquely solvable, transformed solution matches, tier unchanged.
 - `game_controller_test` — digit entry, mistakes per feedback mode, undo/redo restoring digits **and** auto-removed notes, `fillAllNotes` disabled on Hard/Very Hard, hint charges, win flow (stats once, save cleared). Use `SharedPreferences.setMockInitialValues({})`.

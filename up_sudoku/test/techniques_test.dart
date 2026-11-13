@@ -425,9 +425,9 @@ void main() {
         final used = <Technique, int>{};
         var checked = 0;
 
-        for (var n = 0; n < 120; n++) {
+        for (var n = 0; n < 160; n++) {
           final solution = SudokuSolver.solve(List.filled(81, 0), rng: rng)!;
-          final target = 24 + (n % 5) * 4; // 24..40 givens: all tiers
+          final target = 22 + (n % 5) * 4; // 22..38 givens: all tiers
           final puzzle = PuzzleGenerator.dig(solution, target, rng);
           if (SudokuSolver.countSolutions(puzzle, limit: 2) != 1) continue;
 
@@ -470,10 +470,18 @@ void main() {
 
         expect(checked, greaterThan(1000), reason: 'too few steps were checked');
         // The soundness run must exercise more than the singles.
+        final tier2 = used.keys.where((t) => kTechniqueTier[t] == 2).toList();
+        expect(tier2, isNotEmpty, reason: 'no tier 2 step was checked');
+
+        // And it must reach the tier 3 techniques, otherwise fish/wing
+        // eliminations would never be validated against a known solution.
+        final tier3 = used.keys.where((t) => kTechniqueTier[t] == 3).toList();
         expect(
-          used.keys.any((t) => kTechniqueTier[t]! >= 2),
-          isTrue,
-          reason: 'no tier 2 step was checked',
+          tier3,
+          isNotEmpty,
+          reason:
+              'no tier 3 step (X-Wing/XY-Wing/XYZ-Wing/Swordfish) was '
+              'checked; techniques used: $used',
         );
       },
       timeout: const Timeout(Duration(minutes: 4)),

@@ -2282,9 +2282,10 @@ release manifest has no `INTERNET` permission.
 > Pools: Easy 200, Medium 200, Hard 200, Very Hard 120 — all pass
 > `validate_puzzles.dart` (unique solution, valid grid, tier match, givens in
 > range, no duplicates). The generator now re-grades while digging (10.1).
-> `flutter test` green (100 tests); the soundness test replays 120 puzzles
-> dug to 24–40 givens and checks every placement and elimination against the
-> known solution.
+> `flutter test` green (100 tests); the soundness test replays 160 puzzles
+> dug to 22–38 givens, checks every placement and elimination against the
+> known solution, and fails unless the run actually exercised both a tier 2
+> and a tier 3 step (so fish/wing eliminations are always validated).
 > Distribution (per pool, technique uses): Easy singles only; Medium adds
 > pointing/box-line/pairs; Hard adds X-Wing/XY-Wing/XYZ-Wing/Swordfish;
 > Very Hard is any puzzle the tiers 1–3 grader cannot finish.
