@@ -1,8 +1,10 @@
 import 'package:flutter_test/flutter_test.dart';
 import 'package:up_sudoku/controllers/game_controller.dart';
 import 'package:up_sudoku/domain/logic/logic_state.dart';
+import 'package:up_sudoku/domain/logic/technique.dart';
 import 'package:up_sudoku/domain/models/difficulty.dart';
 import 'package:up_sudoku/domain/models/puzzle_entry.dart';
+import 'package:up_sudoku/domain/solver.dart';
 import 'package:up_sudoku/domain/sudoku_constants.dart';
 
 const _puzzle = '530070000600195000098000060800060003400803001700020006060000280000419005000080079';
@@ -15,6 +17,62 @@ PuzzleEntry _entry([Difficulty difficulty = Difficulty.easy]) => PuzzleEntry(
   solution: PuzzleEntry.decode(_solution),
   givens: 30,
   score: 40,
+);
+
+/// A Hard pool puzzle whose first logical step is a pointing elimination
+/// (digit 9 from cell 14).
+const _pointingPuzzle =
+    '000000009700320010041060005078003001000040000900800630100080290020035007800000000';
+
+/// A Very Hard pool puzzle: the tiers 1–3 grader cannot finish it.
+const _veryHardPuzzle =
+    '100043000080005000020019400260000000400000008000000034006490050000600020000350009';
+const _veryHardSolution =
+    '157243986984765312623819475268534791431927568795186234316492857549678123872351649';
+
+/// A board with a single empty cell, so the first hint is a naked single.
+PuzzleEntry _almostSolvedEntry() {
+  final puzzle = PuzzleEntry.decode(_solution)..[0] = 0;
+  return PuzzleEntry(
+    id: 9,
+    difficulty: Difficulty.easy,
+    puzzle: puzzle,
+    solution: PuzzleEntry.decode(_solution),
+    givens: 80,
+    score: 1,
+  );
+}
+
+PuzzleEntry _pointingEntry() {
+  final puzzle = PuzzleEntry.decode(_pointingPuzzle);
+  return PuzzleEntry(
+    id: 140,
+    difficulty: Difficulty.hard,
+    puzzle: puzzle,
+    solution: SudokuSolver.solve(puzzle)!,
+    givens: 30,
+    score: 150,
+  );
+}
+
+PuzzleEntry _veryHardEntry() => PuzzleEntry(
+  id: 1,
+  difficulty: Difficulty.veryHard,
+  puzzle: PuzzleEntry.decode(_veryHardPuzzle),
+  solution: PuzzleEntry.decode(_veryHardSolution),
+  givens: 24,
+  score: 158,
+);
+
+/// A synthetic board no technique applies to (every cell has nine
+/// candidates), i.e. the state in which the reveal fallback is offered.
+PuzzleEntry _stuckEntry() => PuzzleEntry(
+  id: 1,
+  difficulty: Difficulty.veryHard,
+  puzzle: List<int>.filled(kCellCount, 0),
+  solution: PuzzleEntry.decode(_veryHardSolution),
+  givens: 0,
+  score: 158,
 );
 
 /// An empty peer of [cell], used to place a digit next to a note.
@@ -365,5 +423,200 @@ void main() {
     expect(game.values.contains(0), isFalse);
     expect(game.status, GameStatus.playing);
     expect(game.notice.value, isNotNull);
+  });
+
+  test('starts with the hint and check limits of the difficulty', () {
+    expect(game.hintsLeft, 5);
+    expect(game.checksLeft, 0);
+    expect(game.hintsUsed, 0);
+    expect(game.stars, 0);
+
+    game.startGame(Difficulty.hard, specific: _entry(Difficulty.hard));
+    expect(game.hintsLeft, 2);
+    expect(game.checksLeft, 3);
+
+    game.startGame(
+      Difficulty.veryHard,
+      specific: _entry(Difficulty.veryHard),
+    );
+    expect(game.hintsLeft, 1);
+    expect(game.checksLeft, 1);
+  });
+
+  test('a hint costs one charge and starts at stage 1', () {
+    game.requestHint();
+
+    expect(game.hintsLeft, 4);
+    expect(game.hintsUsed, 1);
+    expect(game.hintStage, 1);
+    expect(game.activeHint, isNotNull);
+    expect(game.hintTitle, isNotEmpty);
+    expect(game.hintHighlight, isNotEmpty);
+    expect(game.hintExplanation, isNull);
+
+    // Asking again while a hint is open costs nothing.
+    game.requestHint();
+    expect(game.hintsLeft, 4);
+
+    game.showHintDetails();
+    expect(game.hintStage, 2);
+    expect(game.hintExplanation, isNotNull);
+
+    game.closeHint();
+    expect(game.hintStage, isNull);
+    expect(game.hintsLeft, 4);
+  });
+
+  test('applying a placement hint fills the cell without a mistake', () {
+    game.startGame(Difficulty.easy, specific: _almostSolvedEntry());
+    game.requestHint();
+
+    expect(game.activeHint!.isPlacement, isTrue);
+    expect(game.activeHint!.cell, 0);
+    expect(game.activeHint!.digit, PuzzleEntry.decode(_solution)[0]);
+
+    game.showHintDetails();
+    expect(game.hintExplanation, contains('Digit'));
+    game.applyHint();
+
+    expect(game.values[0], PuzzleEntry.decode(_solution)[0]);
+    expect(game.hintStage, isNull);
+    expect(game.mistakes, 0);
+    expect(game.status, GameStatus.won);
+  });
+
+  test('a hint costs a star on an otherwise perfect win', () {
+    game.startGame(Difficulty.easy, specific: _almostSolvedEntry());
+    game.requestHint();
+    game.showHintDetails();
+    game.applyHint();
+
+    expect(game.status, GameStatus.won);
+    expect(game.hintsUsed, 1);
+    expect(game.stars, 2);
+    expect(game.score, greaterThan(0));
+  });
+
+  test('a perfect win earns three stars and the full time bonus', () {
+    final solution = PuzzleEntry.decode(_solution);
+    for (var i = 0; i < kCellCount; i++) {
+      if (game.values[i] != 0) continue;
+      game.select(i);
+      game.inputDigit(solution[i]);
+    }
+
+    expect(game.status, GameStatus.won);
+    expect(game.stars, 3);
+    expect(game.score, (game.cfg.baseScore * 1.5).round());
+  });
+
+  test('a hint on a wrong digit points at that cell and can erase it', () {
+    game.select(2);
+    game.inputDigit(_wrongDigit(game, 2));
+
+    game.requestHint();
+    expect(game.hintCell, 2);
+    expect(game.activeHint, isNull);
+    expect(game.hintTitle, 'Something here is incorrect');
+
+    game.showHintDetails();
+    expect(game.hintExplanation, contains('does not match'));
+    game.applyHint();
+
+    expect(game.values[2], 0);
+    expect(game.hintStage, isNull);
+  });
+
+  test('an elimination hint removes the candidates from the notes', () {
+    game.startGame(Difficulty.hard, specific: _pointingEntry());
+
+    // Write the candidate the hint will remove as a note first.
+    game.select(14);
+    game.toggleNotesMode();
+    game.inputDigit(9);
+    game.toggleNotesMode();
+    expect(game.notes[14] & bit(9), isNot(0));
+
+    game.requestHint();
+    expect(game.activeHint!.technique, Technique.pointing);
+    expect(game.activeHint!.isElimination, isTrue);
+
+    game.showHintDetails();
+    expect(game.hintExplanation, contains('9'));
+    game.applyHint();
+
+    expect(game.notes[14] & bit(9), 0);
+    expect(game.hintStage, isNull);
+    expect(game.hintsUsed, 1);
+  });
+
+  test('a stuck Very Hard puzzle offers to reveal a cell', () {
+    game.startGame(Difficulty.veryHard, specific: _stuckEntry());
+    game.requestHint();
+
+    expect(game.hintRevealsCell, isTrue);
+    expect(game.hintCell, 0);
+    expect(game.hintTitle, contains('No simple technique'));
+
+    game.showHintDetails();
+    expect(game.hintExplanation, contains('Reveal'));
+
+    final cell = game.hintCell!;
+    game.applyHint();
+
+    expect(game.values[cell], game.entry.solution[cell]);
+    expect(game.hintStage, isNull);
+    expect(game.mistakes, 0);
+    expect(game.hintsLeft, 0);
+  });
+
+  test('hints run out after the configured number', () {
+    for (var i = 0; i < 5; i++) {
+      expect(game.canAskHint, isTrue);
+      game.requestHint();
+      game.closeHint();
+    }
+
+    expect(game.hintsLeft, 0);
+    expect(game.canAskHint, isFalse);
+    game.requestHint();
+    expect(game.hintsUsed, 5);
+  });
+
+  test('check board flags wrong digits and spends a use', () {
+    game.startGame(Difficulty.hard, specific: _entry(Difficulty.hard));
+    game.select(2);
+    game.inputDigit(_wrongDigit(game, 2));
+
+    game.checkBoard();
+    expect(game.flagged, {2});
+    expect(game.checksLeft, 2);
+    expect(game.checksUsed, 1);
+
+    // Editing the cell clears its flag.
+    game.select(2);
+    game.inputDigit(game.entry.solution[2]);
+    expect(game.flagged, isEmpty);
+  });
+
+  test('Easy has no check board use', () {
+    game.checkBoard();
+
+    expect(game.checksLeft, 0);
+    expect(game.checksUsed, 0);
+    expect(game.flagged, isEmpty);
+  });
+
+  test('check board stops working when the uses are gone', () {
+    game.startGame(Difficulty.veryHard, specific: _veryHardEntry());
+    expect(game.canCheck, isTrue);
+
+    game.checkBoard();
+    expect(game.checksLeft, 0);
+    expect(game.checksUsed, 1);
+    expect(game.canCheck, isFalse);
+
+    game.checkBoard();
+    expect(game.checksUsed, 1);
   });
 }

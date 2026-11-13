@@ -3,9 +3,8 @@ library;
 
 import 'package:flutter/material.dart';
 
-/// Actions on the board: undo/redo, erase, notes and the auto-fill helper.
-///
-/// Hint and check buttons arrive with phase 6.
+/// Actions on the board: undo/redo, erase, notes, hint, check and the
+/// auto-fill helper. Items that do not apply to a difficulty are hidden.
 class GameToolbar extends StatelessWidget {
   const GameToolbar({
     super.key,
@@ -13,10 +12,14 @@ class GameToolbar extends StatelessWidget {
     required this.onUndo,
     required this.onRedo,
     required this.onToggleNotes,
+    this.onHint,
+    this.onCheck,
     this.onFillNotes,
     this.canUndo = false,
     this.canRedo = false,
     this.notesMode = false,
+    this.hintsLeft = 0,
+    this.checksLeft = 0,
     this.enabled = true,
   });
 
@@ -32,6 +35,12 @@ class GameToolbar extends StatelessWidget {
   /// Called when notes mode is toggled.
   final VoidCallback onToggleNotes;
 
+  /// Called when the player asks for a hint; null hides the button.
+  final VoidCallback? onHint;
+
+  /// Called when the player checks the board; null hides the button.
+  final VoidCallback? onCheck;
+
   /// Called by the "Auto notes" helper; null hides the button.
   final VoidCallback? onFillNotes;
 
@@ -44,13 +53,20 @@ class GameToolbar extends StatelessWidget {
   /// Whether the number pad currently edits notes.
   final bool notesMode;
 
+  /// Hints left, shown on the hint button.
+  final int hintsLeft;
+
+  /// Checks left, shown on the check button.
+  final int checksLeft;
+
   /// Whether the actions are available.
   final bool enabled;
 
   @override
   Widget build(BuildContext context) {
-    return Row(
-      mainAxisAlignment: MainAxisAlignment.spaceEvenly,
+    return Wrap(
+      alignment: WrapAlignment.spaceEvenly,
+      crossAxisAlignment: WrapCrossAlignment.center,
       children: [
         _ToolbarButton(
           icon: Icons.undo,
@@ -73,6 +89,18 @@ class GameToolbar extends StatelessWidget {
           active: notesMode,
           onPressed: enabled ? onToggleNotes : null,
         ),
+        if (onHint != null)
+          _ToolbarButton(
+            icon: Icons.lightbulb_outline,
+            label: 'Hint $hintsLeft',
+            onPressed: enabled ? onHint : null,
+          ),
+        if (onCheck != null)
+          _ToolbarButton(
+            icon: Icons.fact_check_outlined,
+            label: 'Check $checksLeft',
+            onPressed: enabled ? onCheck : null,
+          ),
         if (onFillNotes != null)
           _ToolbarButton(
             icon: Icons.auto_awesome,

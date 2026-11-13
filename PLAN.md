@@ -2298,9 +2298,26 @@ release manifest has no `INTERNET` permission.
 
 ### Phase 6 – Hints, Checks, Scoring (2 days)
 
-- [ ] Logical hints with 3 stages and the Very Hard fallback.
-- [ ] Check board (Hard/Very Hard), hint/check limits per difficulty.
-- [ ] `ScoreCalculator`, stars, result dialog.
+- [x] Logical hints with 3 stages and the Very Hard fallback.
+- [x] Check board (Hard/Very Hard), hint/check limits per difficulty.
+- [x] `ScoreCalculator`, stars, result dialog.
+
+> Implemented in `controllers/game_controller.dart` (hint stages, reveal
+> fallback, `checkBoard`, score/stars on win), `domain/score_calculator.dart`
+> and `ui/widgets/hint_panel.dart`, `game_toolbar.dart`, `result_dialog.dart`.
+> A hint charges on the first request, stage 1 highlights the pattern (or the
+> first wrong digit, or "no simple technique applies"), stage 2 explains it
+> and stage 3 applies it (place / remove notes / erase the wrong digit /
+> reveal a cell). The panel is inline above the board rather than a dialog so
+> the board stays visible while reading it.
+> Check board marks wrong player digits (`flagged`, already painted) and
+> clears a cell's mark as soon as it is edited. Hint/check counters come from
+> the difficulty config and feed `ScoreCalculator` (score + 1–3 stars).
+> `flutter analyze` clean, `flutter test` green (122 tests), including the
+> three hint stages, the wrong-digit hint, the reveal fallback on a stuck
+> board, check limits per difficulty, and score/stars on a flawless win.
+> Not verified: the inline hint panel and the star row have not been looked at
+> on a device yet.
 
 **Done when:** hints/checks respect limits and always give correct information.
 

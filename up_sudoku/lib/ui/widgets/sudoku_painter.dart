@@ -23,6 +23,7 @@ class SudokuPainter extends CustomPainter {
     required this.accent,
     this.flagged = const <int>{},
     this.hint,
+    this.hintCell,
     this.highlightPeers = true,
     this.highlightSameDigit = true,
     this.dark = false,
@@ -55,6 +56,9 @@ class SudokuPainter extends CustomPainter {
   /// The step currently explained by a hint.
   final LogicStep? hint;
 
+  /// A single cell highlighted by a wrong-digit hint or the reveal fallback.
+  final int? hintCell;
+
   /// Whether the peers of the selected cell are highlighted.
   final bool highlightPeers;
 
@@ -78,7 +82,10 @@ class SudokuPainter extends CustomPainter {
     final sel = selected;
     final selDigit = sel == null ? 0 : values[sel];
     final peers = sel == null ? const <int>{} : kPeers[sel].toSet();
-    final hintCells = hint?.pattern.toSet() ?? const <int>{};
+    final hintCells = <int>{
+      ...?hint?.pattern,
+      if (hintCell != null) hintCell!,
+    };
 
     // 1. backgrounds
     for (var i = 0; i < kCellCount; i++) {

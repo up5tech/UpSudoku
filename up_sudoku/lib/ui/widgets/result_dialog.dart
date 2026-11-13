@@ -5,15 +5,17 @@ import 'package:flutter/material.dart';
 
 import 'game_timer.dart';
 
-/// Shows the result of a solved puzzle.
-///
-/// Stars and the score arrive with phase 6.
+/// Shows the result of a solved puzzle: time, stars, score and assists.
 class ResultDialog extends StatelessWidget {
   const ResultDialog({
     super.key,
     required this.difficultyLabel,
     required this.seconds,
     required this.mistakes,
+    required this.stars,
+    required this.score,
+    required this.hintsUsed,
+    required this.checksUsed,
     required this.onNext,
     required this.onHome,
   });
@@ -27,6 +29,18 @@ class ResultDialog extends StatelessWidget {
   /// Number of wrong digits entered.
   final int mistakes;
 
+  /// Stars earned (1..3).
+  final int stars;
+
+  /// Points earned.
+  final int score;
+
+  /// Hints used in the game.
+  final int hintsUsed;
+
+  /// "Check board" uses in the game.
+  final int checksUsed;
+
   /// Called when the player wants another puzzle.
   final VoidCallback onNext;
 
@@ -36,6 +50,10 @@ class ResultDialog extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     final theme = Theme.of(context);
+    final assists = [
+      if (hintsUsed > 0) 'Hints: $hintsUsed',
+      if (checksUsed > 0) 'Checks: $checksUsed',
+    ];
 
     return AlertDialog(
       title: const Text('Puzzle solved!'),
@@ -43,6 +61,13 @@ class ResultDialog extends StatelessWidget {
         mainAxisSize: MainAxisSize.min,
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
+          Text(
+            '★' * stars + '☆' * (3 - stars),
+            semanticsLabel: '$stars of 3 stars',
+            style: theme.textTheme.headlineSmall,
+          ),
+          const SizedBox(height: 8),
+          Text('Score: $score'),
           Text('$difficultyLabel · ${GameTimer.format(seconds)}'),
           const SizedBox(height: 8),
           Text(
@@ -50,6 +75,7 @@ class ResultDialog extends StatelessWidget {
                 ? 'Flawless — no mistakes.'
                 : 'Mistakes: $mistakes',
           ),
+          if (assists.isNotEmpty) Text(assists.join(' · ')),
         ],
       ),
       actions: [

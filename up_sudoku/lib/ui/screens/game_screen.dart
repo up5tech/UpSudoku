@@ -9,6 +9,7 @@ import '../../controllers/game_controller.dart';
 import '../../domain/models/difficulty.dart';
 import '../widgets/game_timer.dart';
 import '../widgets/game_toolbar.dart';
+import '../widgets/hint_panel.dart';
 import '../widgets/lose_dialog.dart';
 import '../widgets/number_pad.dart';
 import '../widgets/result_dialog.dart';
@@ -107,6 +108,10 @@ class _GameScreenState extends State<GameScreen> {
         difficultyLabel: game.cfg.label,
         seconds: game.elapsedSeconds,
         mistakes: game.mistakes,
+        stars: game.stars,
+        score: game.score,
+        hintsUsed: game.hintsUsed,
+        checksUsed: game.checksUsed,
         onNext: () {
           Navigator.of(dialogContext).pop();
           _startNewPuzzle();
@@ -170,16 +175,34 @@ class _GameScreenState extends State<GameScreen> {
           Column(
             children: [
               _StatusRow(cfg: game.cfg, mistakes: game.mistakes),
+              if (game.hintStage != null)
+                HintPanel(
+                  title: game.hintTitle,
+                  explanation: game.hintExplanation,
+                  stage: game.hintStage!,
+                  revealsCell: game.hintRevealsCell,
+                  onMore: game.showHintDetails,
+                  onApply: game.applyHint,
+                  onClose: game.closeHint,
+                ),
               Expanded(child: const SudokuBoard()),
               GameToolbar(
                 enabled: game.isPlaying,
                 canUndo: game.canUndo,
                 canRedo: game.canRedo,
                 notesMode: game.notesMode,
+                hintsLeft: game.hintsLeft,
+                checksLeft: game.checksLeft,
                 onUndo: game.undo,
                 onRedo: game.redo,
                 onErase: game.erase,
                 onToggleNotes: game.toggleNotesMode,
+                onHint: game.cfg.hintLimit > 0
+                    ? (game.canAskHint ? game.requestHint : null)
+                    : null,
+                onCheck: game.cfg.checkLimit > 0
+                    ? (game.canCheck ? game.checkBoard : null)
+                    : null,
                 onFillNotes: game.cfg.allowAutoFillNotes
                     ? game.fillAllNotes
                     : null,

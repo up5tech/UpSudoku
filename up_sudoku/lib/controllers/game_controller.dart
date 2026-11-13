@@ -7,23 +7,28 @@ import 'dart:math';
 import 'package:flutter/foundation.dart';
 
 import '../data/puzzle_repository.dart';
+import '../domain/logic/grader.dart';
 import '../domain/logic/logic_state.dart';
+import '../domain/logic/logic_step.dart';
+import '../domain/logic/technique.dart';
 import '../domain/models/cell_change.dart';
 import '../domain/models/difficulty.dart';
 import '../domain/models/puzzle_entry.dart';
+import '../domain/score_calculator.dart';
 import '../domain/sudoku_constants.dart';
 
 /// Lifecycle of a game.
 enum GameStatus { playing, paused, won, lost }
 
-/// Holds the current game: board, notes, selection, undo history, timer and
-/// status.
+/// Holds the current game: board, notes, selection, undo history, hints,
+/// checks, timer and status.
 ///
-/// Persistence (phase 7) and hints (phase 6) are added on top of this class.
+/// Persistence is added in phase 7.
 class GameController extends ChangeNotifier {
   GameController({PuzzleRepository? repository}) : _repository = repository;
 
   final PuzzleRepository? _repository;
+  final Grader _grader = Grader.standard();
 
   /// Configuration of the running difficulty.
   late DifficultyConfig cfg;
@@ -46,11 +51,41 @@ class GameController extends ChangeNotifier {
   /// Whether the number pad edits notes instead of placing digits.
   bool notesMode = false;
 
-  /// Cells marked as wrong by "Check board" (filled in phase 6).
+  /// Cells marked as wrong by "Check board".
   final Set<int> flagged = <int>{};
 
   /// Number of wrong digits entered (instant feedback only).
   int mistakes = 0;
+
+  /// Hints still available in this game.
+  int hintsLeft = 0;
+
+  /// "Check board" uses still available in this game.
+  int checksLeft = 0;
+
+  /// Hints already used (counts against the score and the stars).
+  int hintsUsed = 0;
+
+  /// Checks already used (counts against the score and the stars).
+  int checksUsed = 0;
+
+  /// Current hint stage: null = no hint, 1 = pattern, 2 = explained.
+  int? hintStage;
+
+  /// The logical step the active hint explains.
+  LogicStep? activeHint;
+
+  /// The cell highlighted by a wrong-digit hint or by the reveal fallback.
+  int? hintCell;
+
+  /// True when the hint offers to reveal a cell because the grader is stuck.
+  bool hintRevealsCell = false;
+
+  /// Points earned by the finished game.
+  int score = 0;
+
+  /// Stars earned by the finished game (0 while still playing).
+  int stars = 0;
 
   /// Seconds elapsed since the game started.
   int elapsedSeconds = 0;
@@ -84,11 +119,57 @@ class GameController extends ChangeNotifier {
   /// True when there is an undone action to redo.
   bool get canRedo => isPlaying && _redo.isNotEmpty;
 
+  /// True when the player may ask for a hint right now.
+  bool get canAskHint => isPlaying && hintsLeft > 0 && hintStage == null;
+
+  /// True when the player may use "Check board" right now.
+  bool get canCheck => isPlaying && checksLeft > 0;
+
   /// True when the given of [cell] cannot be changed.
   bool isGiven(int cell) => given[cell];
 
   /// The digit placed in [cell] (0 when empty).
   int valueAt(int cell) => values[cell];
+
+  /// Cells to highlight for the active hint (empty when there is none).
+  List<int> get hintHighlight {
+    final step = activeHint;
+    if (step != null && step.pattern.isNotEmpty) return step.pattern;
+    final cell = hintCell;
+    return cell == null ? const [] : [cell];
+  }
+
+  /// Headline of the active hint (technique name or a special case).
+  String get hintTitle {
+    if (hintRevealsCell) return 'No simple technique applies';
+    if (hintCell != null && activeHint == null) {
+      return 'Something here is incorrect';
+    }
+    final step = activeHint;
+    return step == null ? 'Hint' : kTechniqueName[step.technique] ?? 'Hint';
+  }
+
+  /// Stage-2 explanation of the active hint; null at stage 1.
+  String? get hintExplanation {
+    final stage = hintStage;
+    if (stage == null || stage < 2) return null;
+    if (hintRevealsCell) {
+      return 'The grader cannot finish this puzzle with simple techniques. '
+          'Reveal one cell to keep going.';
+    }
+    if (hintCell != null && activeHint == null) {
+      return 'This digit does not match the solution.';
+    }
+    final step = activeHint;
+    if (step == null) return null;
+    if (step.isPlacement) {
+      return 'Digit ${step.digit} can only go in this cell.';
+    }
+    final cells = step.eliminations.length;
+    final mask = step.eliminations.values.fold<int>(0, (a, m) => a | m);
+    return 'Remove ${digitsOf(mask).join(', ')} from '
+        '$cells cell${cells == 1 ? '' : 's'}.';
+  }
 
   /// Starts a new game on [difficulty].
   ///
@@ -103,6 +184,13 @@ class GameController extends ChangeNotifier {
     selected = null;
     notesMode = false;
     mistakes = 0;
+    hintsLeft = cfg.hintLimit;
+    checksLeft = cfg.checkLimit;
+    hintsUsed = 0;
+    checksUsed = 0;
+    _clearHint();
+    score = 0;
+    stars = 0;
     elapsedSeconds = 0;
     status = GameStatus.playing;
     flagged.clear();
@@ -185,6 +273,113 @@ class GameController extends ChangeNotifier {
     _commit(changes);
   }
 
+  /// Asks for a hint; the first call of a game consumes one hint charge.
+  ///
+  /// Stage 1 only highlights the pattern (or the first wrong cell, or the
+  /// "no technique applies" fallback). [showHintDetails] explains it and
+  /// [applyHint] carries it out.
+  void requestHint() {
+    if (!canAskHint) return;
+    hintsLeft--;
+    hintsUsed++;
+    hintStage = 1;
+    activeHint = null;
+    hintCell = null;
+    hintRevealsCell = false;
+
+    final wrong = _firstWrongCell();
+    if (wrong != null) {
+      hintCell = wrong;
+      notifyListeners();
+      return;
+    }
+
+    final step = _grader.nextStep(values);
+    if (step != null) {
+      activeHint = step;
+    } else {
+      hintRevealsCell = true;
+      hintCell = _fewestCandidatesCell();
+    }
+    notifyListeners();
+  }
+
+  /// Moves the active hint to stage 2 (the explanation).
+  void showHintDetails() {
+    if (hintStage == null) return;
+    if (hintStage == 1) hintStage = 2;
+    notifyListeners();
+  }
+
+  /// Applies the active hint: places the digit, removes the candidates from
+  /// the notes, erases the wrong digit or reveals a cell.
+  void applyHint() {
+    if (!isPlaying || hintStage == null) return;
+
+    if (hintRevealsCell) {
+      final cell = hintCell;
+      if (cell != null) _setValue(cell, entry.solution[cell]);
+      return;
+    }
+
+    if (hintCell != null && activeHint == null) {
+      final cell = hintCell!;
+      _commit([CellChange(cell, values[cell], 0, notes[cell], notes[cell])]);
+      return;
+    }
+
+    final step = activeHint;
+    if (step == null) {
+      _clearHint();
+      notifyListeners();
+      return;
+    }
+
+    if (step.isPlacement) {
+      _setValue(step.cell!, step.digit!);
+      return;
+    }
+
+    final changes = <CellChange>[
+      for (final entry in step.eliminations.entries)
+        if ((notes[entry.key] & entry.value) != 0)
+          CellChange(
+            entry.key,
+            0,
+            0,
+            notes[entry.key],
+            notes[entry.key] & ~entry.value,
+          ),
+    ];
+    if (changes.isEmpty) {
+      notice.value = 'Those candidates are already removed.';
+      _clearHint();
+      notifyListeners();
+      return;
+    }
+    _commit(changes);
+  }
+
+  /// Dismisses the active hint without applying it.
+  void closeHint() {
+    if (hintStage == null) return;
+    _clearHint();
+    notifyListeners();
+  }
+
+  /// Marks every wrong player digit (Hard/Very Hard).
+  void checkBoard() {
+    if (!canCheck) return;
+    checksLeft--;
+    checksUsed++;
+    flagged.clear();
+    for (var i = 0; i < kCellCount; i++) {
+      if (given[i] || values[i] == 0) continue;
+      if (values[i] != entry.solution[i]) flagged.add(i);
+    }
+    notifyListeners();
+  }
+
   /// Pauses the game: the timer stops and the board is hidden by the UI.
   void pause() {
     if (!isPlaying) return;
@@ -225,7 +420,11 @@ class GameController extends ChangeNotifier {
   }
 
   void _setValue(int i, int digit) {
-    if (values[i] == digit) return; // no-op, never counts twice
+    if (values[i] == digit) {
+      _clearHint();
+      notifyListeners();
+      return; // no-op, never counts twice
+    }
     final changes = <CellChange>[CellChange(i, values[i], digit, notes[i], 0)];
     if (cfg.autoRemoveNotes) {
       for (final p in kPeers[i]) {
@@ -256,6 +455,7 @@ class GameController extends ChangeNotifier {
     _undo.add(changes);
     _redo.clear();
     notice.value = null;
+    _clearHint();
     notifyListeners();
   }
 
@@ -264,6 +464,38 @@ class GameController extends ChangeNotifier {
       values[c.cell] = undo ? c.oldValue : c.newValue;
       notes[c.cell] = undo ? c.oldNotes : c.newNotes;
     }
+  }
+
+  void _clearHint() {
+    hintStage = null;
+    activeHint = null;
+    hintCell = null;
+    hintRevealsCell = false;
+  }
+
+  /// The first player digit that differs from the solution, if any.
+  int? _firstWrongCell() {
+    for (var i = 0; i < kCellCount; i++) {
+      if (given[i] || values[i] == 0) continue;
+      if (values[i] != entry.solution[i]) return i;
+    }
+    return null;
+  }
+
+  /// The empty cell with the fewest candidates (reveal fallback).
+  int? _fewestCandidatesCell() {
+    final state = LogicState.fromPuzzle(values);
+    int? best;
+    var bestCount = 10;
+    for (var i = 0; i < kCellCount; i++) {
+      if (values[i] != 0) continue;
+      final count = popCount(state.cand[i]);
+      if (count < bestCount) {
+        bestCount = count;
+        best = i;
+      }
+    }
+    return best;
   }
 
   void _checkWin() {
@@ -285,6 +517,17 @@ class GameController extends ChangeNotifier {
     status = result;
     _timer?.cancel();
     _timer = null;
+    if (result == GameStatus.won) {
+      final scored = ScoreCalculator.evaluate(
+        cfg: cfg,
+        seconds: elapsedSeconds,
+        mistakes: mistakes,
+        hintsUsed: hintsUsed,
+        checksUsed: checksUsed,
+      );
+      score = scored.score;
+      stars = scored.stars;
+    }
     notifyListeners();
   }
 
