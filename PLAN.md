@@ -2218,11 +2218,25 @@ release manifest has no `INTERNET` permission.
 
 ### Phase 3 – Playable Prototype on Easy (3 days)
 
-- [ ] `PuzzleRepository` (Easy only), `GameController` (digits, erase, win).
-- [ ] `SudokuPainter` + `SudokuBoard` (selection, highlights, digits).
-- [ ] Number pad, timer, win dialog.
+- [x] `PuzzleRepository` (Easy only), `GameController` (digits, erase, win).
+- [x] `SudokuPainter` + `SudokuBoard` (selection, highlights, digits).
+- [x] Number pad, timer, win dialog.
 
 **Done when:** a full Easy game can be played from start to win.
+
+> Status: implemented in `lib/data/puzzle_repository.dart`,
+> `lib/controllers/game_controller.dart` and `lib/ui/` (`screens/home_screen.dart`,
+> `screens/game_screen.dart`, `widgets/sudoku_painter.dart`,
+> `widgets/sudoku_board.dart`, `widgets/number_pad.dart`,
+> `widgets/game_toolbar.dart`, `widgets/game_timer.dart`,
+> `widgets/result_dialog.dart`).
+> `flutter analyze` clean, `flutter test` green (63 tests, including an
+> end-to-end widget test: home → Easy game → tap cell → digit pad → win
+> dialog). Verified on an iOS simulator (iPhone 16e): board, timer, mistakes
+> counter, number pad with remaining counts and the pause overlay all render
+> correctly.
+> Still open for later phases: splash screen, notes/undo/hint/check toolbar
+> entries, stars and score in the win dialog, persistence.
 
 ### Phase 4 – Notes, Undo/Redo, Assist Rules (2 days)
 
