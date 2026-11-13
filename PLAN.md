@@ -2441,7 +2441,9 @@ release manifest has no `INTERNET` permission.
 > scrolls sideways when a pane is too narrow, so the height the layout subtracts
 > is the height it really gets, and `layout_test` asserts it on every wide case.
 > Its buttons keep `kCompactToolbarMinButton` (48 dp) so scrolling never trades
-> a touch target for width; a 480×360 window is the narrow case in the test. On a
+> a touch target for width, and when the row overflows a chevron gets its own
+> slot at the edge (pointing the way the bar still has to travel) so the hidden
+> actions are discoverable; a 480×360 window is the narrow case in the test. On a
 > tablet that gives the board ~650 px and the pad a ~330 px column with the pad
 > centred vertically.
 > **Localized technique names** — hint headlines used the English names from the

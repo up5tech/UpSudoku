@@ -179,6 +179,9 @@ class AppLocalizations {
 
   String get hint => _t('Hint', 'Gợi ý');
 
+  /// Tooltip of the chevron that reveals actions hidden by a narrow toolbar.
+  String get moreActions => _t('More actions', 'Thêm thao tác');
+
   /// The name of [technique] as shown in a hint headline.
   String techniqueName(Technique technique) => switch (technique) {
         Technique.nakedSingle => _t('Naked Single', 'Single trần'),

@@ -141,18 +141,7 @@ class GameToolbar extends StatelessWidget {
       // take them below a comfortable touch target.
       return SizedBox(
         height: kCompactToolbarHeight,
-        child: LayoutBuilder(
-          builder: (context, constraints) => SingleChildScrollView(
-            scrollDirection: Axis.horizontal,
-            child: ConstrainedBox(
-              constraints: BoxConstraints(minWidth: constraints.maxWidth),
-              child: Row(
-                mainAxisAlignment: MainAxisAlignment.spaceEvenly,
-                children: buttons,
-              ),
-            ),
-          ),
-        ),
+        child: _CompactBar(children: buttons),
       );
     }
 
@@ -160,6 +149,128 @@ class GameToolbar extends StatelessWidget {
       alignment: WrapAlignment.spaceEvenly,
       crossAxisAlignment: WrapCrossAlignment.center,
       children: buttons,
+    );
+  }
+}
+
+/// The scrolling icons-only row, with a fade on any edge that hides actions.
+///
+/// A half-visible icon row reads as a layout bug; the fade says "there is more
+/// this way" without adding a second row of controls.
+class _CompactBar extends StatefulWidget {
+  const _CompactBar({required this.children});
+
+  final List<Widget> children;
+
+  @override
+  State<_CompactBar> createState() => _CompactBarState();
+}
+
+class _CompactBarState extends State<_CompactBar> {
+  final ScrollController _controller = ScrollController();
+  bool _atStart = true;
+  bool _atEnd = false;
+
+  @override
+  void initState() {
+    super.initState();
+    _controller.addListener(_syncEdges);
+  }
+
+  @override
+  void dispose() {
+    _controller.dispose();
+    super.dispose();
+  }
+
+  void _syncEdges() {
+    if (!mounted || !_controller.hasClients) return;
+    final position = _controller.position;
+    final atStart = position.pixels <= 0.5;
+    final atEnd = position.pixels >= position.maxScrollExtent - 0.5;
+    if (atStart == _atStart && atEnd == _atEnd) return;
+    setState(() {
+      _atStart = atStart;
+      _atEnd = atEnd;
+    });
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    // The scroll extent is only known after layout, and it changes when the
+    // pane is resized, so re-check it on every frame this bar builds.
+    WidgetsBinding.instance.addPostFrameCallback((_) => _syncEdges());
+    return LayoutBuilder(
+      builder: (context, constraints) {
+        final overflows = widget.children.length * kCompactToolbarMinButton >
+            constraints.maxWidth;
+        final bar = SingleChildScrollView(
+          controller: _controller,
+          scrollDirection: Axis.horizontal,
+          child: ConstrainedBox(
+            constraints: BoxConstraints(minWidth: constraints.maxWidth),
+            child: Row(
+              mainAxisAlignment: MainAxisAlignment.spaceEvenly,
+              children: widget.children,
+            ),
+          ),
+        );
+        if (!overflows) return bar;
+
+        // The chevron gets its own slot so it never covers a button; it points
+        // the way the bar still has to travel, which makes the hidden actions
+        // discoverable instead of leaving a silently clipped row.
+        final forward = !_atEnd;
+        return Row(
+          children: [
+            Expanded(child: bar),
+            _ScrollChevron(
+              forward: forward,
+              tooltip: AppLocalizations.of(context).moreActions,
+              onPressed: () {
+                final position = _controller.position;
+                _controller.animateTo(
+                  forward ? position.maxScrollExtent : 0,
+                  duration: const Duration(milliseconds: 220),
+                  curve: Curves.easeOut,
+                );
+              },
+            ),
+          ],
+        );
+      },
+    );
+  }
+}
+
+/// The small button that pages the toolbar to its hidden end.
+class _ScrollChevron extends StatelessWidget {
+  const _ScrollChevron({
+    required this.forward,
+    required this.tooltip,
+    required this.onPressed,
+  });
+
+  final bool forward;
+  final String tooltip;
+  final VoidCallback onPressed;
+
+  @override
+  Widget build(BuildContext context) {
+    return Tooltip(
+      message: tooltip,
+      child: InkWell(
+        onTap: onPressed,
+        child: SizedBox(
+          width: kCompactToolbarMinButton,
+          height: kCompactToolbarHeight,
+          child: Icon(
+            forward ? Icons.chevron_right : Icons.chevron_left,
+            size: 20,
+            color: Theme.of(context).colorScheme.onSurfaceVariant,
+          ),
+        ),
+      ),
     );
   }
 }

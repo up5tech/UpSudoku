@@ -200,6 +200,16 @@ void main() {
       minBoard: 240,
       maxGutter: 24,
     );
+    // Six 48 dp actions fit this pane, so there is nothing to reveal.
+    expect(
+      find.descendant(
+        of: find.byType(GameToolbar),
+        matching: find.byType(Icon),
+      ),
+      findsNWidgets(6),
+      reason: 'landscape bar shows every action, no chevron',
+    );
+
     await checkGameAt(
       'landscape phone 844x390 at 2x text',
       const Size(844, 390),
@@ -241,6 +251,40 @@ void main() {
       expect(size.width, greaterThanOrEqualTo(kCompactToolbarMinButton));
       expect(size.height, greaterThanOrEqualTo(kCompactToolbarMinButton));
     }
+
+    // Hidden actions must be discoverable: a chevron marks the edge that still
+    // has actions behind it.
+    final barRect = tester.getRect(find.byType(GameToolbar));
+    expect(
+      find.byIcon(Icons.chevron_right),
+      findsOneWidget,
+      reason: 'narrow bar offers to reveal its hidden actions',
+    );
+    // The last action of an Easy game is "Auto notes".
+    final lastAction = find.ancestor(
+      of: find.byIcon(Icons.auto_awesome),
+      matching: find.byType(InkWell),
+    );
+    expect(
+      tester.getRect(lastAction).right,
+      greaterThan(barRect.right),
+      reason: 'the last action starts hidden',
+    );
+
+    // Tapping it pages the bar; the last action becomes visible and the chevron
+    // flips back the other way.
+    await tester.tap(find.byIcon(Icons.chevron_right));
+    await tester.pump();
+    await tester.pump(const Duration(milliseconds: 300));
+    final lastRect = tester.getRect(lastAction);
+    expect(lastRect.left, greaterThanOrEqualTo(barRect.left - 0.01));
+    expect(
+      lastRect.right,
+      lessThanOrEqualTo(barRect.right + 0.01),
+      reason: 'the chevron reveals the last action inside the pane',
+    );
+    expect(find.byIcon(Icons.chevron_left), findsOneWidget);
+    expect(find.byIcon(Icons.chevron_right), findsNothing);
 
     await checkHintAt(
       'landscape phone 844x390 with a hint',
