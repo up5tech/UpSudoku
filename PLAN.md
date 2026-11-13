@@ -2395,6 +2395,14 @@ release manifest has no `INTERNET` permission.
 > the game screen clears it after playing, so a board action plays exactly one
 > sound; the winning move cues the win only (no placement cue on top), and the
 > losing move cues the loss only.
+> **Vietnamese layout check** — every screen was rendered in Vietnamese in
+> Chromium at 390×844 and 320×568 (Home, Settings, How to play, Stats, the game
+> with its hint panel and pause overlay, and both result dialogs). Two fixes came
+> out of it: the home card count no longer sits under the buttons on a narrow
+> phone (it is inside `Expanded`), and the theme segmented button drops its
+> selected tick so "Hệ thống" stays on one line. `test/layout_test` now pumps
+> every screen at 320×568 in Vietnamese with the bundled font and fails on any
+> render overflow.
 > **Still open:** high-contrast theme, human playtests and the tuning they imply,
 > store screenshots/listing, signing keys (`key.properties` is never committed)
 > and the two-device manual run — the release build has not been produced yet.

@@ -215,6 +215,7 @@ Required coverage:
 - `game_controller_test` — digit entry, mistakes per feedback mode, undo/redo restoring digits **and** auto-removed notes, `fillAllNotes` disabled on Hard/Very Hard, hint charges, win flow (stats once, save cleared), one cue per action. Use `SharedPreferences.setMockInitialValues({})`.
 - `localizations_test` — both string tables, parameterized strings, the `Settings.language` JSON round-trip and persistence.
 - `audio_cue_test` — a home → game → tap → place run plays one `tap` and one `place` cue through an `AudioService` spy.
+- `layout_test` — every screen in Vietnamese at 320×568 with the bundled font; a render overflow fails the test. Add new screens to it.
 
 Manual test plan before release: airplane mode, kill-and-restore per difficulty, all three feedback modes, notes helpers per difficulty, pause hides board, small/large phone + tablet + landscape, dark mode + colour-blind check, daily puzzle stable across relaunch.
 

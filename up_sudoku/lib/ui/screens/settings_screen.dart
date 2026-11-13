@@ -74,6 +74,8 @@ class SettingsScreen extends StatelessWidget {
           Padding(
             padding: const EdgeInsets.fromLTRB(16, 4, 16, 8),
             child: SegmentedButton<ThemePreference>(
+              // The tick costs the width that "Hệ thống" needs on small phones.
+              showSelectedIcon: false,
               segments: [
                 ButtonSegment(
                   value: ThemePreference.system,
@@ -103,6 +105,7 @@ class SettingsScreen extends StatelessWidget {
             leading: const Icon(Icons.translate),
             title: Text(l10n.language),
             trailing: DropdownButton<AppLanguage>(
+              underline: const SizedBox.shrink(),
               value: settings.language,
               onChanged: (value) {
                 if (value != null) settings.setLanguage(value);

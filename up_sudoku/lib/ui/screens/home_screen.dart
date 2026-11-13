@@ -255,15 +255,18 @@ class _DifficultyCard extends StatelessWidget {
             const SizedBox(height: 12),
             Row(
               children: [
-                Text(
-                  poolSize > 0
-                      ? l10n.solvedCount(completed, poolSize)
-                      : l10n.poolComingSoon,
-                  style: theme.textTheme.labelMedium?.copyWith(
-                    color: theme.colorScheme.onSurfaceVariant,
+                // Expanded keeps the count from sliding under the buttons on
+                // narrow phones, where it wraps instead.
+                Expanded(
+                  child: Text(
+                    poolSize > 0
+                        ? l10n.solvedCount(completed, poolSize)
+                        : l10n.poolComingSoon,
+                    style: theme.textTheme.labelMedium?.copyWith(
+                      color: theme.colorScheme.onSurfaceVariant,
+                    ),
                   ),
                 ),
-                const Spacer(),
                 if (hasSaved) ...[
                   OutlinedButton(
                     onPressed: onContinue,
