@@ -1,0 +1,19 @@
+# macOS
+.DS_Store
+
+# Editors
+.idea/
+*.iml
+.vscode/
+
+# Secrets — never commit signing material
+key.properties
+*.jks
+*.keystore
+*.p12
+*.mobileprovision
+
+# Local caches / build output
+build/
+.dart_tool/
+.packages

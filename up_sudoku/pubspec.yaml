@@ -1,0 +1,43 @@
+name: up_sudoku
+description: "UpSudoku - an offline Sudoku game with four difficulty levels."
+publish_to: 'none'
+
+# versionName/versionCode on Android, CFBundleShortVersionString/CFBundleVersion on iOS.
+version: 1.0.0+1
+
+environment:
+  sdk: ">=3.3.0 <4.0.0"
+
+dependencies:
+  flutter:
+    sdk: flutter
+  provider: ^6.1.5
+  shared_preferences: ^2.5.6
+  audioplayers: ^6.8.1
+
+dev_dependencies:
+  flutter_test:
+    sdk: flutter
+  flutter_lints: ^6.0.0
+  flutter_launcher_icons: ^0.14.4
+
+# App icon generation (run once an icon exists at assets/images/icon.png):
+#   dart run flutter_launcher_icons
+# flutter_launcher_icons:
+#   android: true
+#   ios: true
+#   image_path: "assets/images/icon.png"
+#   remove_alpha_ios: true
+
+flutter:
+  uses-material-design: true
+  assets:
+    - assets/puzzles/
+    - assets/audio/
+    - assets/images/
+  fonts:
+    - family: Baloo2
+      fonts:
+        - asset: assets/fonts/Baloo2-Regular.ttf
+        - asset: assets/fonts/Baloo2-Bold.ttf
+          weight: 700

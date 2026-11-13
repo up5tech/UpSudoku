@@ -1,0 +1,22 @@
+# Static analysis for UpSudoku.
+#
+# Run `flutter analyze` before considering any task done; it must be clean.
+include: package:flutter_lints/flutter.yaml
+
+analyzer:
+  exclude:
+    - build/**
+    - android/**
+    - ios/**
+  language:
+    strict-casts: true
+    strict-inference: true
+    strict-raw-types: true
+
+linter:
+  rules:
+    # Keep the app offline and warning-free.
+    avoid_print: true
+    prefer_single_quotes: true
+    always_declare_return_types: true
+    unawaited_futures: true
