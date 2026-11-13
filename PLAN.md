@@ -1903,7 +1903,7 @@ Every read goes through `try/catch`; on failure return defaults (never crash on 
 ### 17.2 Principles
 
 - **One saved game per difficulty:** switching difficulty never destroys another game.
-- **Autosave** after every change, on pause, and when the app goes to the background (`WidgetsBindingObserver`).
+- **Autosave** is debounced: a change marks the slot dirty and a 400 ms timer writes it, so a burst of moves costs one JSON encode and one platform write. A new game, a pause, backgrounding (`WidgetsBindingObserver`) and `dispose` flush immediately, so a kill or an OS eviction cannot lose the last moves; a pending write is dropped when the game is won or lost so a finished game never reappears in the slot.
 - On resume, restore `values`, `notes`, counters and `elapsedSeconds`; the **undo stack is not saved** (keeps saves small) — the undo button is empty until the next action.
 - When a game ends (win/lose), clear that difficulty's saved game.
 - Keys carry a version (`_v1`) so formats can be migrated later.

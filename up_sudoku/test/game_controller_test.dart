@@ -10,6 +10,7 @@ import 'package:up_sudoku/domain/logic/logic_state.dart';
 import 'package:up_sudoku/domain/logic/technique.dart';
 import 'package:up_sudoku/domain/models/difficulty.dart';
 import 'package:up_sudoku/domain/models/puzzle_entry.dart';
+import 'package:up_sudoku/domain/models/saved_game.dart';
 import 'package:up_sudoku/domain/solver.dart';
 import 'package:up_sudoku/domain/sudoku_constants.dart';
 import 'package:up_sudoku/l10n/app_localizations.dart';
@@ -92,6 +93,19 @@ int _emptyPeer(GameController game, int cell) =>
 int _wrongDigit(GameController game, int cell) {
   final solution = game.entry.solution[cell];
   return solution == 9 ? 1 : solution + 1;
+}
+
+/// Counts every write into a difficulty's save slot.
+class _CountingStorage extends StorageService {
+  _CountingStorage(super.prefs);
+
+  int gameWrites = 0;
+
+  @override
+  Future<void> writeGame(Difficulty difficulty, SavedGame game) {
+    gameWrites++;
+    return super.writeGame(difficulty, game);
+  }
 }
 
 List<int> _emptyCells(GameController game) => [
@@ -669,6 +683,8 @@ void main() {
       ).firstWhere((i) => first.values[i] == 0);
       first.select(empty);
       first.inputDigit(entry.solution[empty]);
+      // Moves are written after a short debounce; a pause or a kill flushes.
+      await Future<void>.delayed(GameController.autosaveDelay * 2);
       await pumpEventQueue();
 
       final saved = storage.readGame(Difficulty.easy);
@@ -928,6 +944,121 @@ void main() {
       controller.startGame(Difficulty.easy, specific: entry);
       expect(stats.of(Difficulty.easy).currentStreak, 0);
       controller.dispose();
+    });
+  });
+
+  group('autosave', () {
+    late _CountingStorage storage;
+    late PuzzleRepository repository;
+    late PuzzleEntry entry;
+
+    setUp(() async {
+      SharedPreferences.setMockInitialValues({});
+      storage = _CountingStorage(await SharedPreferences.getInstance());
+      repository = PuzzleRepository();
+      await repository.load();
+      entry = repository.pool(Difficulty.easy).first;
+    });
+
+    GameController start() => GameController(
+          repository: repository,
+          storage: storage,
+        )..startGame(Difficulty.easy, specific: entry);
+
+    /// The first two empty cells and their solution digits.
+    List<(int, int)> moves(GameController controller) => [
+          for (var i = 0; i < kCellCount; i++)
+            if (controller.values[i] == 0) (i, entry.solution[i]),
+        ].take(2).toList();
+
+    test('a new game is written immediately', () {
+      final controller = start();
+      expect(storage.gameWrites, 1);
+      final saved = storage.readGame(Difficulty.easy)!;
+      expect(saved.puzzleId, entry.id);
+      controller.dispose();
+    });
+
+    test('a burst of moves costs one write, not one per move', () async {
+      final controller = start();
+      final before = storage.gameWrites;
+      final first = moves(controller)[0];
+      final second = moves(controller)[1];
+
+      controller.select(first.$1);
+      controller.inputDigit(first.$2);
+      controller.select(second.$1);
+      controller.inputDigit(second.$2);
+
+      expect(
+        storage.gameWrites,
+        before,
+        reason: 'nothing is written while the debounce window is open',
+      );
+
+      await Future<void>.delayed(GameController.autosaveDelay * 2);
+      expect(storage.gameWrites, before + 1);
+      final saved = storage.readGame(Difficulty.easy)!;
+      expect(saved.values[first.$1], first.$2);
+      expect(saved.values[second.$1], second.$2);
+      controller.dispose();
+    });
+
+    test('pause flushes a move that is still in the window', () async {
+      final controller = start();
+      final before = storage.gameWrites;
+      final cell = moves(controller)[0];
+
+      controller.select(cell.$1);
+      controller.inputDigit(cell.$2);
+      controller.pause();
+
+      expect(storage.gameWrites, before + 1);
+      expect(storage.readGame(Difficulty.easy)!.values[cell.$1], cell.$2);
+
+      // The flushed write cancels the timer, so nothing is written twice.
+      await Future<void>.delayed(GameController.autosaveDelay * 2);
+      expect(storage.gameWrites, before + 1);
+      controller.dispose();
+    });
+
+    test('dispose flushes, so a kill still restores the game', () {
+      final controller = start();
+      final cell = moves(controller)[0];
+      controller.select(cell.$1);
+      controller.inputDigit(cell.$2);
+      controller.dispose();
+
+      final restored = GameController(
+        repository: repository,
+        storage: storage,
+      );
+      expect(restored.restore(Difficulty.easy), isTrue);
+      expect(restored.values[cell.$1], cell.$2);
+      restored.dispose();
+    });
+
+    test('a killed app loses nothing after a pause', () async {
+      final controller = start();
+      final first = moves(controller)[0];
+      final second = moves(controller)[1];
+      controller.select(first.$1);
+      controller.inputDigit(first.$2);
+      controller.select(second.$1);
+      controller.inputDigit(second.$2);
+      controller.pause();
+      // No waiting: the flush on pause is what a backgrounding app relies on.
+      controller.dispose();
+
+      final restored = GameController(
+        repository: repository,
+        storage: storage,
+      );
+      expect(restored.restore(Difficulty.easy), isTrue);
+      expect(restored.values[first.$1], first.$2);
+      expect(restored.values[second.$1], second.$2);
+      expect(restored.status, GameStatus.playing);
+      restored.dispose();
     });
   });
 }

@@ -178,7 +178,7 @@ These are **starting hypotheses**, not measured facts. Tune via assist rules fir
 Every read goes through `try/catch` → fall back to defaults. **Never crash on corrupted data.**
 
 ### Autosave
-After every change, on pause, and when the app is backgrounded (`WidgetsBindingObserver`). Clear the saved game on win/lose.
+Changes are debounced (`GameController.autosaveDelay`, 400 ms) so a burst of moves costs one JSON encode and one write instead of one per move. A new game, a pause, backgrounding (`WidgetsBindingObserver`) and `dispose` flush immediately, so a kill never loses the last moves; `flush()` covers `detached`. Clear the saved game on win/lose, and cancel a pending write there so a finished game cannot reappear in the slot.
 
 ### Daily puzzle
 Deterministic: difficulty by weekday, puzzle index = `daysSince(2024-01-01) % pool.length`. Uses the device date; no server.

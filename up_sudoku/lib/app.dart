@@ -85,7 +85,10 @@ class _UpSudokuAppState extends State<UpSudokuApp> with WidgetsBindingObserver {
         state == AppLifecycleState.inactive ||
         state == AppLifecycleState.hidden) {
       if (_game.hasGame && _game.isPlaying) _game.pause();
+      return;
     }
+    // The engine is going away without a pause: still persist the last moves.
+    if (state == AppLifecycleState.detached && _game.hasGame) _game.flush();
   }
 
   @override

@@ -298,7 +298,8 @@ class GameController extends ChangeNotifier {
     _started = true;
     _stats?.recordStarted(difficulty, abandoned: replacedUnfinished);
     _startTimer();
-    _autosave();
+    // A new game is written at once, so a kill right after starting restores it.
+    _autosave(immediate: true);
     notifyListeners();
   }
 
@@ -487,7 +488,8 @@ class GameController extends ChangeNotifier {
     status = GameStatus.paused;
     _timer?.cancel();
     _timer = null;
-    _autosave();
+    // Pausing is also how backgrounding saves, so it must not wait.
+    _autosave(immediate: true);
     notifyListeners();
   }
 
@@ -571,10 +573,45 @@ class GameController extends ChangeNotifier {
     notifyListeners();
   }
 
+  /// How long a board change waits before it is written to the save slot.
+  ///
+  /// Every move used to serialize and write the whole game. Typing quickly then
+  /// meant dozens of JSON encodes and platform writes a minute, so changes are
+  /// coalesced and a burst of moves costs one write. Anything that must not be
+  /// lost — a new game, a pause, backgrounding, disposal — flushes instead.
+  static const Duration autosaveDelay = Duration(milliseconds: 400);
+
+  Timer? _autosaveTimer;
+  bool _savePending = false;
+
   /// Writes the current game into its difficulty's save slot.
-  void _autosave() {
+  ///
+  /// [immediate] writes now and cancels a pending debounced write.
+  void _autosave({bool immediate = false}) {
     final storage = _storage;
     if (storage == null || !_started) return;
+    // A finished game has no save slot: `_finish` cleared it.
+    if (status == GameStatus.won || status == GameStatus.lost) return;
+    _savePending = true;
+    if (immediate) {
+      _writeSave();
+      return;
+    }
+    _autosaveTimer?.cancel();
+    _autosaveTimer = Timer(autosaveDelay, _writeSave);
+  }
+
+  /// Writes any pending change right now (backgrounding, disposal).
+  void flush() => _writeSave();
+
+  void _writeSave() {
+    _autosaveTimer?.cancel();
+    _autosaveTimer = null;
+    if (!_savePending) return;
+    _savePending = false;
+    final storage = _storage;
+    if (storage == null || !_started) return;
+    if (status == GameStatus.won || status == GameStatus.lost) return;
     storage.writeGame(
       cfg.id,
       SavedGame(
@@ -665,6 +702,11 @@ class GameController extends ChangeNotifier {
 
   void _finish(GameStatus result) {
     status = result;
+    // The save slot is about to be cleared: a pending write must not put the
+    // finished game back into it.
+    _autosaveTimer?.cancel();
+    _autosaveTimer = null;
+    _savePending = false;
     _emit(result == GameStatus.won ? SoundCue.win : SoundCue.lose);
     _timer?.cancel();
     _timer = null;
@@ -713,6 +755,10 @@ class GameController extends ChangeNotifier {
 
   @override
   void dispose() {
+    // Last chance to persist a move that is still inside the debounce window.
+    _writeSave();
+    _autosaveTimer?.cancel();
+    _autosaveTimer = null;
     _timer?.cancel();
     _timer = null;
     elapsed.dispose();
