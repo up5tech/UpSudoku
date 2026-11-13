@@ -4,7 +4,7 @@ library;
 import 'dart:async';
 import 'dart:math';
 
-import 'package:flutter/foundation.dart';
+import 'package:flutter/widgets.dart';
 
 import '../core/sound_cue.dart';
 import '../data/puzzle_repository.dart';
@@ -20,6 +20,7 @@ import '../domain/models/puzzle_entry.dart';
 import '../domain/models/saved_game.dart';
 import '../domain/score_calculator.dart';
 import '../domain/sudoku_constants.dart';
+import '../l10n/app_localizations.dart';
 import 'stats_controller.dart';
 
 /// Lifecycle of a game.
@@ -40,6 +41,12 @@ class GameController extends ChangeNotifier {
   final StorageService? _storage;
   final StatsController? _stats;
   final Grader _grader = Grader.standard();
+
+  /// Strings used by the hint panel and the neutral notices.
+  ///
+  /// The game screen keeps this in step with the app locale; English is the
+  /// default so headless tests and tools read stable text.
+  AppLocalizations l10n = const AppLocalizations(Locale('en'));
 
   /// Configuration of the running difficulty.
   late DifficultyConfig cfg;
@@ -121,6 +128,15 @@ class GameController extends ChangeNotifier {
   /// (PLAN.md §18). Null means "nothing to play".
   final ValueNotifier<SoundCue?> cue = ValueNotifier<SoundCue?>(null);
 
+  /// Publishes exactly one cue per board event.
+  ///
+  /// The notifier is cleared first so a repeated cue still notifies, and the
+  /// UI listener clears it again after playing, so no event is heard twice.
+  void _emit(SoundCue value) {
+    cue.value = null;
+    cue.value = value;
+  }
+
   final List<List<CellChange>> _undo = [];
   final List<List<CellChange>> _redo = [];
 
@@ -162,34 +178,33 @@ class GameController extends ChangeNotifier {
 
   /// Headline of the active hint (technique name or a special case).
   String get hintTitle {
-    if (hintRevealsCell) return 'No simple technique applies';
+    if (hintRevealsCell) return l10n.noSimpleTechnique;
     if (hintCell != null && activeHint == null) {
-      return 'Something here is incorrect';
+      return l10n.somethingIsWrong;
     }
     final step = activeHint;
-    return step == null ? 'Hint' : kTechniqueName[step.technique] ?? 'Hint';
+    return step == null
+        ? l10n.hint
+        : kTechniqueName[step.technique] ?? l10n.hint;
   }
 
   /// Stage-2 explanation of the active hint; null at stage 1.
   String? get hintExplanation {
     final stage = hintStage;
     if (stage == null || stage < 2) return null;
-    if (hintRevealsCell) {
-      return 'The grader cannot finish this puzzle with simple techniques. '
-          'Reveal one cell to keep going.';
-    }
+    if (hintRevealsCell) return l10n.revealExplanation;
     if (hintCell != null && activeHint == null) {
-      return 'This digit does not match the solution.';
+      return l10n.wrongDigitExplanation;
     }
     final step = activeHint;
     if (step == null) return null;
-    if (step.isPlacement) {
-      return 'Digit ${step.digit} can only go in this cell.';
-    }
+    if (step.isPlacement) return l10n.placementExplanation(step.digit!);
     final cells = step.eliminations.length;
     final mask = step.eliminations.values.fold<int>(0, (a, m) => a | m);
-    return 'Remove ${digitsOf(mask).join(', ')} from '
-        '$cells cell${cells == 1 ? '' : 's'}.';
+    return l10n.eliminationExplanation(
+      digitsOf(mask).join(', '),
+      cells,
+    );
   }
 
   /// True when [difficulty] has a game that can be continued.
@@ -441,7 +456,7 @@ class GameController extends ChangeNotifier {
           ),
     ];
     if (changes.isEmpty) {
-      notice.value = 'Those candidates are already removed.';
+      notice.value = l10n.candidatesAlreadyRemoved;
       _clearHint();
       notifyListeners();
       return;
@@ -535,14 +550,15 @@ class GameController extends ChangeNotifier {
         _finish(GameStatus.lost);
         return;
       }
-      cue.value = SoundCue.error;
+      _emit(SoundCue.error);
       notifyListeners();
-    } else {
+    } else if (!isSolved) {
       // Deferred-feedback modes must stay silent about correctness, so a
-      // wrong-but-accepted digit sounds exactly like a correct one.
-      cue.value = _completesUnit(i)
-          ? SoundCue.unitComplete
-          : SoundCue.place;
+      // wrong-but-accepted digit sounds exactly like a correct one. The
+      // winning move announces only the win.
+      _emit(
+        _completesUnit(i) ? SoundCue.unitComplete : SoundCue.place,
+      );
     }
     _checkWin();
   }
@@ -631,7 +647,7 @@ class GameController extends ChangeNotifier {
   }
 
   void _onFullButWrong() {
-    notice.value = 'The board is full but something is still wrong.';
+    notice.value = l10n.boardFullButWrong;
   }
 
   /// True when [cell] completes a row, column or box correctly.
@@ -652,7 +668,7 @@ class GameController extends ChangeNotifier {
 
   void _finish(GameStatus result) {
     status = result;
-    cue.value = result == GameStatus.won ? SoundCue.win : SoundCue.lose;
+    _emit(result == GameStatus.won ? SoundCue.win : SoundCue.lose);
     _timer?.cancel();
     _timer = null;
     if (result == GameStatus.won) {

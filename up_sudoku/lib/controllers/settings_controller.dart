@@ -58,6 +58,20 @@ class SettingsController extends ChangeNotifier {
   void setTheme(ThemePreference value) =>
       update(_settings.copyWith(theme: value));
 
+  /// The chosen UI language.
+  AppLanguage get language => _settings.language;
+
+  /// The `Locale` for `MaterialApp`; null follows the device.
+  Locale? get locale => switch (_settings.language) {
+    AppLanguage.system => null,
+    AppLanguage.english => const Locale('en'),
+    AppLanguage.vietnamese => const Locale('vi'),
+  };
+
+  /// Changes the UI language.
+  void setLanguage(AppLanguage value) =>
+      update(_settings.copyWith(language: value));
+
   /// Toggles peer highlighting.
   void setHighlightPeers(bool value) =>
       update(_settings.copyWith(highlightPeers: value));

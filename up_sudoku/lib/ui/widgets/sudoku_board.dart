@@ -11,6 +11,7 @@ import '../../controllers/settings_controller.dart';
 import '../../core/sound_cue.dart';
 import '../../core/theme.dart';
 import '../../data/audio_service.dart';
+import '../../l10n/app_localizations.dart';
 import 'sudoku_painter.dart';
 
 /// Renders the board and maps taps to cells.
@@ -55,6 +56,7 @@ class SudokuBoard extends StatelessWidget {
                     selected: game.selected,
                     feedback: game.cfg.feedback,
                     accent: accentColorFor(game.cfg.id),
+                    l10n: AppLocalizations.of(context),
                     flagged: Set<int>.of(game.flagged),
                     hint: game.activeHint,
                     hintCell: game.hintCell,

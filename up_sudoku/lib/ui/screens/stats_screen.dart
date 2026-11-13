@@ -8,6 +8,7 @@ import '../../controllers/stats_controller.dart';
 import '../../core/theme.dart';
 import '../../domain/models/difficulty.dart';
 import '../../domain/models/difficulty_stats.dart';
+import '../../l10n/app_localizations.dart';
 import '../widgets/game_timer.dart';
 
 /// Shows the counters kept for every difficulty (PLAN.md §19.3).
@@ -17,9 +18,10 @@ class StatsScreen extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     final stats = context.watch<StatsController>();
+    final l10n = AppLocalizations.of(context);
 
     return Scaffold(
-      appBar: AppBar(title: const Text('Statistics')),
+      appBar: AppBar(title: Text(l10n.statistics)),
       body: ListView(
         padding: const EdgeInsets.all(16),
         children: [
@@ -43,6 +45,7 @@ class _StatsCard extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     final theme = Theme.of(context);
+    final l10n = AppLocalizations.of(context);
     final accent = accentColorFor(difficulty);
 
     return Card(
@@ -64,7 +67,7 @@ class _StatsCard extends StatelessWidget {
                 ),
                 const SizedBox(width: 8),
                 Text(
-                  kDifficulties[difficulty]!.label,
+                  l10n.difficulty(difficulty),
                   style: theme.textTheme.titleMedium?.copyWith(
                     color: accent,
                     fontWeight: FontWeight.w700,
@@ -72,35 +75,35 @@ class _StatsCard extends StatelessWidget {
                 ),
                 const Spacer(),
                 Text(
-                  '${stats.completed} solved',
+                  l10n.statsSolved(stats.completed),
                   style: theme.textTheme.labelMedium,
                 ),
               ],
             ),
             const SizedBox(height: 10),
-            _Row(label: 'Started', value: '${stats.started}'),
+            _Row(label: l10n.started, value: '${stats.started}'),
             _Row(
-              label: 'Win rate',
+              label: l10n.winRate,
               value: stats.started == 0
                   ? '—'
                   : '${(stats.winRate * 100).round()}%',
             ),
             _Row(
-              label: 'Best time',
+              label: l10n.bestTimeLabel,
               value: stats.bestTimeOrNull == null
                   ? '—'
                   : GameTimer.format(stats.bestTimeOrNull!),
             ),
             _Row(
-              label: 'Average time',
+              label: l10n.averageTime,
               value: stats.averageTime == null
                   ? '—'
                   : GameTimer.format(stats.averageTime!),
             ),
-            _Row(label: 'Flawless wins', value: '${stats.flawlessWins}'),
+            _Row(label: l10n.flawlessWins, value: '${stats.flawlessWins}'),
             _Row(
-              label: 'Streak',
-              value: '${stats.currentStreak} (best ${stats.bestStreak})',
+              label: l10n.streak,
+              value: l10n.streakValue(stats.currentStreak, stats.bestStreak),
             ),
           ],
         ),

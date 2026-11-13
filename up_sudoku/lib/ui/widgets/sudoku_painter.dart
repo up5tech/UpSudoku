@@ -7,6 +7,7 @@ import 'package:flutter/semantics.dart';
 import '../../domain/logic/logic_step.dart';
 import '../../domain/models/difficulty.dart';
 import '../../domain/sudoku_constants.dart';
+import '../../l10n/app_localizations.dart';
 
 /// Paints backgrounds, grid, digits, notes and error markers.
 ///
@@ -21,6 +22,7 @@ class SudokuPainter extends CustomPainter {
     required this.selected,
     required this.feedback,
     required this.accent,
+    required this.l10n,
     this.flagged = const <int>{},
     this.hint,
     this.hintCell,
@@ -50,6 +52,9 @@ class SudokuPainter extends CustomPainter {
 
   /// Accent colour of the current difficulty.
   final Color accent;
+
+  /// Strings used for the per-cell semantics labels.
+  final AppLocalizations l10n;
 
   /// Cells marked by "Check board".
   final Set<int> flagged;
@@ -269,16 +274,16 @@ class SudokuPainter extends CustomPainter {
 
   /// "Row 3, column 5, value 7, given" style description of a cell.
   String _semanticsLabel(int i) {
-    final row = rowOf(i) + 1;
-    final col = colOf(i) + 1;
+    final base = l10n.boardCell(rowOf(i) + 1, colOf(i) + 1);
     if (values[i] != 0) {
-      return 'Row $row, column $col, value ${values[i]}'
-          '${given[i] ? ', given' : ''}';
+      return base +
+          l10n.boardValue(values[i]) +
+          (given[i] ? l10n.boardGiven : '');
     }
     if (notes[i] != 0) {
-      return 'Row $row, column $col, empty, notes ${digitsOf(notes[i]).join(' ')}';
+      return base + l10n.boardNotes(digitsOf(notes[i]).join(' '));
     }
-    return 'Row $row, column $col, empty';
+    return base + l10n.boardEmpty;
   }
 
   @override

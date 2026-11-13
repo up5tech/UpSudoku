@@ -3,6 +3,8 @@ library;
 
 import 'package:flutter/material.dart';
 
+import '../../l10n/app_localizations.dart';
+
 /// Actions on the board: undo/redo, erase, notes, hint, check and the
 /// auto-fill helper. Items that do not apply to a difficulty are hidden.
 class GameToolbar extends StatelessWidget {
@@ -64,47 +66,49 @@ class GameToolbar extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
+    final l10n = AppLocalizations.of(context);
+
     return Wrap(
       alignment: WrapAlignment.spaceEvenly,
       crossAxisAlignment: WrapCrossAlignment.center,
       children: [
         _ToolbarButton(
           icon: Icons.undo,
-          label: 'Undo',
+          label: l10n.undo,
           onPressed: enabled && canUndo ? onUndo : null,
         ),
         _ToolbarButton(
           icon: Icons.redo,
-          label: 'Redo',
+          label: l10n.redo,
           onPressed: enabled && canRedo ? onRedo : null,
         ),
         _ToolbarButton(
           icon: Icons.backspace_outlined,
-          label: 'Erase',
+          label: l10n.erase,
           onPressed: enabled ? onErase : null,
         ),
         _ToolbarButton(
           icon: Icons.edit_note,
-          label: 'Notes',
+          label: l10n.notes,
           active: notesMode,
           onPressed: enabled ? onToggleNotes : null,
         ),
         if (onHint != null)
           _ToolbarButton(
             icon: Icons.lightbulb_outline,
-            label: 'Hint $hintsLeft',
+            label: l10n.hintWithCount(hintsLeft),
             onPressed: enabled ? onHint : null,
           ),
         if (onCheck != null)
           _ToolbarButton(
             icon: Icons.fact_check_outlined,
-            label: 'Check $checksLeft',
+            label: l10n.checkWithCount(checksLeft),
             onPressed: enabled ? onCheck : null,
           ),
         if (onFillNotes != null)
           _ToolbarButton(
             icon: Icons.auto_awesome,
-            label: 'Auto notes',
+            label: l10n.autoNotes,
             onPressed: enabled ? onFillNotes : null,
           ),
       ],

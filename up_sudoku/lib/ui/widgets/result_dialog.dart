@@ -3,6 +3,7 @@ library;
 
 import 'package:flutter/material.dart';
 
+import '../../l10n/app_localizations.dart';
 import 'game_timer.dart';
 
 /// Shows the result of a solved puzzle: time, stars, score and assists.
@@ -50,37 +51,36 @@ class ResultDialog extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     final theme = Theme.of(context);
+    final l10n = AppLocalizations.of(context);
     final assists = [
-      if (hintsUsed > 0) 'Hints: $hintsUsed',
-      if (checksUsed > 0) 'Checks: $checksUsed',
+      if (hintsUsed > 0) l10n.hintsUsedLine(hintsUsed),
+      if (checksUsed > 0) l10n.checksUsedLine(checksUsed),
     ];
 
     return AlertDialog(
-      title: const Text('Puzzle solved!'),
+      title: Text(l10n.puzzleSolved),
       content: Column(
         mainAxisSize: MainAxisSize.min,
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
           Text(
             '★' * stars + '☆' * (3 - stars),
-            semanticsLabel: '$stars of 3 stars',
+            semanticsLabel: l10n.starsLabel(stars),
             style: theme.textTheme.headlineSmall,
           ),
           const SizedBox(height: 8),
-          Text('Score: $score'),
+          Text(l10n.scoreValue(score)),
           Text('$difficultyLabel · ${GameTimer.format(seconds)}'),
           const SizedBox(height: 8),
           Text(
-            mistakes == 0
-                ? 'Flawless — no mistakes.'
-                : 'Mistakes: $mistakes',
+            mistakes == 0 ? l10n.flawlessWin : l10n.mistakesLine(mistakes),
           ),
           if (assists.isNotEmpty) Text(assists.join(' · ')),
         ],
       ),
       actions: [
-        TextButton(onPressed: onHome, child: const Text('Home')),
-        FilledButton(onPressed: onNext, child: const Text('Next puzzle')),
+        TextButton(onPressed: onHome, child: Text(l10n.home)),
+        FilledButton(onPressed: onNext, child: Text(l10n.nextPuzzle)),
       ],
       shape: RoundedRectangleBorder(
         borderRadius: BorderRadius.circular(16),

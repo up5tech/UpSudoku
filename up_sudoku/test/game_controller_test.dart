@@ -783,6 +783,66 @@ void main() {
       expect(game.cue.value, SoundCue.place);
     });
 
+    test('one board action emits its cue exactly once', () {
+      game = GameController();
+      game.startGame(Difficulty.easy, specific: _entry());
+      final seen = <SoundCue>[];
+      game.cue.addListener(() {
+        final cue = game.cue.value;
+        if (cue != null) seen.add(cue);
+      });
+
+      final empty = _emptyCells(game).first;
+      game.select(empty);
+      game.inputDigit(game.entry.solution[empty]);
+
+      expect(seen, [SoundCue.place]);
+    });
+
+    test('the winning move cues only the win', () {
+      game = GameController();
+      game.startGame(Difficulty.easy, specific: _entry());
+      final empties = _emptyCells(game);
+      final last = empties.last;
+      for (final cell in empties.take(empties.length - 1)) {
+        game.select(cell);
+        game.inputDigit(game.entry.solution[cell]);
+      }
+
+      final seen = <SoundCue>[];
+      game.cue.addListener(() {
+        final cue = game.cue.value;
+        if (cue != null) seen.add(cue);
+      });
+      game.select(last);
+      game.inputDigit(game.entry.solution[last]);
+
+      expect(game.status, GameStatus.won);
+      expect(seen, [SoundCue.win]);
+    });
+
+    test('the losing move cues only the loss', () {
+      game = GameController();
+      game.startGame(Difficulty.medium, specific: _entry(Difficulty.medium));
+      final empties = _emptyCells(game).take(5).toList();
+      for (final cell in empties.take(4)) {
+        game.select(cell);
+        game.inputDigit(_wrongDigit(game, cell));
+      }
+      expect(game.status, GameStatus.playing);
+
+      final seen = <SoundCue>[];
+      game.cue.addListener(() {
+        final cue = game.cue.value;
+        if (cue != null) seen.add(cue);
+      });
+      game.select(empties[4]);
+      game.inputDigit(_wrongDigit(game, empties[4]));
+
+      expect(game.status, GameStatus.lost);
+      expect(seen, [SoundCue.lose]);
+    });
+
     test('completing a unit cues the unit sound', () {
       game = GameController();
       game.startGame(Difficulty.easy, specific: _entry());

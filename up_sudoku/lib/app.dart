@@ -1,6 +1,7 @@
 import 'dart:async';
 
 import 'package:flutter/material.dart';
+import 'package:flutter_localizations/flutter_localizations.dart';
 import 'package:provider/provider.dart';
 
 import 'controllers/game_controller.dart';
@@ -11,6 +12,7 @@ import 'core/theme.dart';
 import 'data/audio_service.dart';
 import 'data/puzzle_repository.dart';
 import 'data/storage_service.dart';
+import 'l10n/app_localizations.dart';
 import 'ui/screens/home_screen.dart';
 
 /// Root widget of the app.
@@ -104,6 +106,14 @@ class _UpSudokuAppState extends State<UpSudokuApp> with WidgetsBindingObserver {
           theme: buildLightTheme(),
           darkTheme: buildDarkTheme(),
           themeMode: settings.themeMode,
+          locale: settings.locale,
+          supportedLocales: AppLocalizations.supportedLocales,
+          localizationsDelegates: const [
+            AppLocalizations.delegate,
+            GlobalMaterialLocalizations.delegate,
+            GlobalWidgetsLocalizations.delegate,
+            GlobalCupertinoLocalizations.delegate,
+          ],
           home: const HomeScreen(),
         ),
       ),

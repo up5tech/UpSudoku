@@ -1,4 +1,4 @@
-/// Sound, haptics, theme, highlighting and data reset.
+/// Sound, haptics, theme, language, highlighting and data reset.
 library;
 
 import 'package:flutter/material.dart';
@@ -8,28 +8,27 @@ import '../../controllers/settings_controller.dart';
 import '../../controllers/stats_controller.dart';
 import '../../data/storage_service.dart';
 import '../../domain/models/settings.dart';
+import '../../l10n/app_localizations.dart';
 
 /// Settings screen (PLAN.md §14.2).
 class SettingsScreen extends StatelessWidget {
   const SettingsScreen({super.key});
 
   Future<void> _resetData(BuildContext context) async {
+    final l10n = AppLocalizations.of(context);
     final confirmed = await showDialog<bool>(
       context: context,
       builder: (dialogContext) => AlertDialog(
-        title: const Text('Reset data?'),
-        content: const Text(
-          'This clears statistics, saved games and the daily streak. '
-          'It cannot be undone.',
-        ),
+        title: Text(l10n.resetDataTitle),
+        content: Text(l10n.resetDataBody),
         actions: [
           TextButton(
             onPressed: () => Navigator.of(dialogContext).pop(false),
-            child: const Text('Cancel'),
+            child: Text(l10n.cancel),
           ),
           FilledButton(
             onPressed: () => Navigator.of(dialogContext).pop(true),
-            child: const Text('Reset'),
+            child: Text(l10n.reset),
           ),
         ],
       ),
@@ -45,42 +44,49 @@ class SettingsScreen extends StatelessWidget {
     if (!context.mounted) return;
     ScaffoldMessenger.of(
       context,
-    ).showSnackBar(const SnackBar(content: Text('All data cleared.')));
+    ).showSnackBar(SnackBar(content: Text(l10n.allDataCleared)));
   }
 
   @override
   Widget build(BuildContext context) {
     final settings = context.watch<SettingsController>();
+    final l10n = AppLocalizations.of(context);
 
     return Scaffold(
-      appBar: AppBar(title: const Text('Settings')),
+      appBar: AppBar(title: Text(l10n.settings)),
       body: ListView(
         children: [
-          const _SectionHeader('Sound & feedback'),
+          _SectionHeader(l10n.soundAndFeedback),
           SwitchListTile(
-            title: const Text('Sound effects'),
-            subtitle: const Text('Tap, place, error and win sounds'),
+            title: Text(l10n.soundEffects),
+            subtitle: Text(l10n.soundEffectsSubtitle),
             value: settings.sound,
             onChanged: settings.setSound,
           ),
           SwitchListTile(
-            title: const Text('Haptics'),
-            subtitle: const Text('Vibrate on placement and mistakes'),
+            title: Text(l10n.haptics),
+            subtitle: Text(l10n.hapticsSubtitle),
             value: settings.haptics,
             onChanged: settings.setHaptics,
           ),
           const Divider(),
-          const _SectionHeader('Appearance'),
+          _SectionHeader(l10n.appearance),
           Padding(
             padding: const EdgeInsets.fromLTRB(16, 4, 16, 8),
             child: SegmentedButton<ThemePreference>(
-              segments: const [
+              segments: [
                 ButtonSegment(
                   value: ThemePreference.system,
-                  label: Text('System'),
+                  label: Text(l10n.themeSystem),
                 ),
-                ButtonSegment(value: ThemePreference.light, label: Text('Light')),
-                ButtonSegment(value: ThemePreference.dark, label: Text('Dark')),
+                ButtonSegment(
+                  value: ThemePreference.light,
+                  label: Text(l10n.themeLight),
+                ),
+                ButtonSegment(
+                  value: ThemePreference.dark,
+                  label: Text(l10n.themeDark),
+                ),
               ],
               selected: {settings.settings.theme},
               onSelectionChanged: (selection) =>
@@ -88,22 +94,39 @@ class SettingsScreen extends StatelessWidget {
             ),
           ),
           SwitchListTile(
-            title: const Text('Large digits'),
-            subtitle: const Text('Bigger digits and notes on the board'),
+            title: Text(l10n.largeDigits),
+            subtitle: Text(l10n.largeDigitsSubtitle),
             value: settings.largeDigits,
             onChanged: settings.setLargeDigits,
           ),
+          ListTile(
+            leading: const Icon(Icons.translate),
+            title: Text(l10n.language),
+            trailing: DropdownButton<AppLanguage>(
+              value: settings.language,
+              onChanged: (value) {
+                if (value != null) settings.setLanguage(value);
+              },
+              items: [
+                for (final language in AppLanguage.values)
+                  DropdownMenuItem(
+                    value: language,
+                    child: Text(l10n.languageName(language)),
+                  ),
+              ],
+            ),
+          ),
           const Divider(),
-          const _SectionHeader('Board highlighting'),
+          _SectionHeader(l10n.boardHighlighting),
           SwitchListTile(
-            title: const Text('Highlight peers'),
-            subtitle: const Text('Tint the row, column and box of the cell'),
+            title: Text(l10n.highlightPeers),
+            subtitle: Text(l10n.highlightPeersSubtitle),
             value: settings.highlightPeers,
             onChanged: settings.setHighlightPeers,
           ),
           SwitchListTile(
-            title: const Text('Highlight same digit'),
-            subtitle: const Text('Tint the other cells holding that digit'),
+            title: Text(l10n.highlightSameDigit),
+            subtitle: Text(l10n.highlightSameDigitSubtitle),
             value: settings.highlightSameDigit,
             onChanged: settings.setHighlightSameDigit,
           ),
@@ -113,8 +136,8 @@ class SettingsScreen extends StatelessWidget {
               Icons.delete_outline,
               color: Theme.of(context).colorScheme.error,
             ),
-            title: const Text('Reset data'),
-            subtitle: const Text('Statistics, saved games and daily streak'),
+            title: Text(l10n.resetData),
+            subtitle: Text(l10n.resetDataSubtitle),
             onTap: () => _resetData(context),
           ),
           const SizedBox(height: 24),

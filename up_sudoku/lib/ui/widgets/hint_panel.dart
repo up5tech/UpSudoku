@@ -3,6 +3,8 @@ library;
 
 import 'package:flutter/material.dart';
 
+import '../../l10n/app_localizations.dart';
+
 /// Explains a hint and offers the next stage or the apply action.
 class HintPanel extends StatelessWidget {
   const HintPanel({
@@ -40,6 +42,7 @@ class HintPanel extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     final theme = Theme.of(context);
+    final l10n = AppLocalizations.of(context);
 
     return Card(
       margin: const EdgeInsets.symmetric(horizontal: 12, vertical: 4),
@@ -48,7 +51,10 @@ class HintPanel extends StatelessWidget {
         padding: const EdgeInsets.fromLTRB(12, 8, 4, 8),
         child: Row(
           children: [
-            Icon(Icons.lightbulb_outline, color: theme.colorScheme.onSecondaryContainer),
+            Icon(
+              Icons.lightbulb_outline,
+              color: theme.colorScheme.onSecondaryContainer,
+            ),
             const SizedBox(width: 10),
             Expanded(
               child: Column(
@@ -75,14 +81,14 @@ class HintPanel extends StatelessWidget {
               ),
             ),
             if (stage == 1)
-              TextButton(onPressed: onMore, child: const Text('Show more'))
+              TextButton(onPressed: onMore, child: Text(l10n.showMore))
             else
               TextButton(
                 onPressed: onApply,
-                child: Text(revealsCell ? 'Reveal cell' : 'Apply'),
+                child: Text(revealsCell ? l10n.revealCell : l10n.apply),
               ),
             IconButton(
-              tooltip: 'Close hint',
+              tooltip: l10n.closeHint,
               icon: const Icon(Icons.close),
               onPressed: onClose,
             ),

@@ -3,6 +3,8 @@ library;
 
 import 'package:flutter/material.dart';
 
+import '../../l10n/app_localizations.dart';
+
 /// A digit button showing how often the digit is still missing.
 class NumberPad extends StatelessWidget {
   const NumberPad({
@@ -90,8 +92,9 @@ class _DigitButton extends StatelessWidget {
       key: ValueKey('digit-$digit'),
       button: true,
       enabled: !used,
-      label: 'Digit $digit, $remaining remaining'
-          '${notesMode ? ', note mode' : ''}',
+      label: AppLocalizations.of(
+        context,
+      ).digitLabel(digit, remaining, notesMode: notesMode),
       child: Material(
         color: used
             ? theme.colorScheme.surfaceContainerHighest.withValues(alpha: 0.4)

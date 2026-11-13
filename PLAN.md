@@ -1930,6 +1930,10 @@ Every read goes through `try/catch`; on failure return defaults (never crash on 
 - `GameController.cue` emits the cue and the game screen plays it; a wrong digit
   in `conflictsOnly`/`none` must sound exactly like a correct one (no feedback
   leak).
+- **Exactly one cue per action:** `_emit` clears the notifier before publishing
+  and the listener clears it after playing; a winning move cues `win` instead of
+  `place`, a losing move cues `lose` instead of `error`. `test/audio_cue_test`
+  counts the cues a tap and a placement produce.
 
 ---
 
@@ -2360,7 +2364,7 @@ release manifest has no `INTERNET` permission.
 ### Phase 8 – Polish, Playtests & Release (3 days)
 
 - [x] Audio, haptics, dark mode, large digits, accessibility semantics.
-- [ ] Localization (en/vi).
+- [x] Localization (en/vi).
 - [ ] Human playtests and tuning (section 22.3–22.4).
 - [x] Icon, splash and store assets.
 - [ ] Full manual test (21.5); build and sign release (section 25).
@@ -2380,11 +2384,21 @@ release manifest has no `INTERNET` permission.
 > **Accessibility** — the board already exposes per-cell semantics, a non-colour
 > error marker, large digits and a dark theme; VoiceOver/TalkBack walk-through
 > still to be done on a device.
-> **Still open:** localization (en/vi), high-contrast theme, human playtests and
-> the tuning they imply, store screenshots/listing, signing keys (`key.properties`
-> is never committed) and the two-device manual run — the release build has not
-> been produced yet.
-> `flutter analyze` clean, `flutter test` green (155 tests), `validate_puzzles`
+> **Localization** — `lib/l10n/app_localizations.dart` holds every string in
+> English and Vietnamese behind a `LocalizationsDelegate` (no codegen);
+> `Settings.language` (`system`/`english`/`vietnamese`) picks the locale and is
+> changed from Settings → Language, persisted like the rest of the settings.
+> Technique names stay in English as standard terms. The hint and notice texts
+> read from the controller's `l10n`, which the game screen keeps in step with
+> the app locale, and the painter's per-cell semantics are localized too.
+> **Cue once** — `GameController._emit` resets the cue before publishing it and
+> the game screen clears it after playing, so a board action plays exactly one
+> sound; the winning move cues the win only (no placement cue on top), and the
+> losing move cues the loss only.
+> **Still open:** high-contrast theme, human playtests and the tuning they imply,
+> store screenshots/listing, signing keys (`key.properties` is never committed)
+> and the two-device manual run — the release build has not been produced yet.
+> `flutter analyze` clean, `flutter test` green (170 tests), `validate_puzzles`
 > passes.
 
 **Estimated total:** ≈ 20–23 working days for the full version. A playable Easy game exists after Phase 3; all four difficulties after Phase 5.

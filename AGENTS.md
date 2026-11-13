@@ -17,6 +17,7 @@ Guidance for coding agents working on **UpSudoku**: a fully offline Flutter/Dart
 | Storage | `shared_preferences` |
 | Audio | `audioplayers` (local `AssetSource` files) |
 | Icons / splash | `flutter_launcher_icons` + generated artwork |
+| Localization | hand-written en/vi table in `lib/l10n/`, `flutter_localizations` |
 | Board rendering | One `CustomPainter` canvas, arithmetic hit-testing |
 | Background work | `compute()` (Isolates) for hints / runtime generation |
 | Platforms | Android + iOS primary; Web/Desktop optional |
@@ -66,6 +67,7 @@ up_sudoku/
 ├─ lib/
 │  ├─ main.dart, app.dart
 │  ├─ core/{constants.dart,theme.dart,sound_cue.dart}
+│  ├─ l10n/app_localizations.dart   # en/vi strings + delegate
 │  ├─ domain/
 │  │  ├─ sudoku_constants.dart
 │  │  ├─ models/{difficulty.dart,puzzle_entry.dart,save_data.dart}
@@ -210,7 +212,9 @@ Required coverage:
 - **Soundness test (critical)** — over ~160 generated puzzles of all tiers: at every grader step, the placed digit equals the solution digit and **no eliminated candidate equals the solution digit** of that cell. The run must also fail unless it actually exercised a tier-2 and a tier-3 technique, so fish/wing eliminations cannot silently stop being covered.
 - `grader_test` — determinism; stuck puzzle → tier 4 + `solvedLogically == false` while the backtracking solver still finds its unique solution.
 - `transformer_test` — transformed puzzle still uniquely solvable, transformed solution matches, tier unchanged.
-- `game_controller_test` — digit entry, mistakes per feedback mode, undo/redo restoring digits **and** auto-removed notes, `fillAllNotes` disabled on Hard/Very Hard, hint charges, win flow (stats once, save cleared). Use `SharedPreferences.setMockInitialValues({})`.
+- `game_controller_test` — digit entry, mistakes per feedback mode, undo/redo restoring digits **and** auto-removed notes, `fillAllNotes` disabled on Hard/Very Hard, hint charges, win flow (stats once, save cleared), one cue per action. Use `SharedPreferences.setMockInitialValues({})`.
+- `localizations_test` — both string tables, parameterized strings, the `Settings.language` JSON round-trip and persistence.
+- `audio_cue_test` — a home → game → tap → place run plays one `tap` and one `place` cue through an `AudioService` spy.
 
 Manual test plan before release: airplane mode, kill-and-restore per difficulty, all three feedback modes, notes helpers per difficulty, pause hides board, small/large phone + tablet + landscape, dark mode + colour-blind check, daily puzzle stable across relaunch.
 
@@ -252,6 +256,7 @@ Run `validate_puzzles.dart` whenever the grader or technique order changes — t
 
 - **Read PLAN.md first**, then the relevant `lib/` files. Do not invent new architecture; extend the plan's structure.
 - **Match existing code**: naming (`snake_case` files, `_camelCase` privates), the `CellChange` undo model, `k`-prefixed constants, `SolveTechnique` interface shape.
+- **No literal UI text in widgets**: every user-visible string goes through `AppLocalizations` (English + Vietnamese getters); add both translations in the same change.
 - **One concern per change.** Keep diffs reviewable; avoid drive-by refactors.
 - **Every new domain behaviour needs a test** in the same change.
 - **Never lower the difficulty standard to hit a pool size.** If Very Hard yield is low, run generation longer or accept a smaller pool.
@@ -273,7 +278,7 @@ Run `validate_puzzles.dart` whenever the grader or technique order changes — t
 | 5 | Tier 2 & 3 techniques, soundness test, full pools | ✅ |
 | 6 | Hints (3 stages + fallback), check board, scoring & stars | ✅ |
 | 7 | Persistence, stats, settings, daily puzzle | ✅ |
-| 8 | Polish, audio/haptics/theme/i18n, playtests, release | 🟡 audio, haptics, icon/splash done; i18n, playtests, signing open |
+| 8 | Polish, audio/haptics/theme/i18n, playtests, release | 🟡 audio, haptics, i18n, icon/splash done; high-contrast, playtests, signing open |
 
 Order matters: do not build UI polish before the puzzle pipeline and grader are correct — difficulty quality is the core value of this app.
 

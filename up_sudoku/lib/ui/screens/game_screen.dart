@@ -7,12 +7,13 @@ import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 import 'package:provider/provider.dart';
 
+import '../../controllers/game_controller.dart';
 import '../../controllers/settings_controller.dart';
 import '../../core/sound_cue.dart';
 import '../../core/theme.dart';
-import '../../controllers/game_controller.dart';
 import '../../data/audio_service.dart';
 import '../../domain/models/difficulty.dart';
+import '../../l10n/app_localizations.dart';
 import '../widgets/game_timer.dart';
 import '../widgets/game_toolbar.dart';
 import '../widgets/hint_panel.dart';
@@ -57,6 +58,9 @@ class _GameScreenState extends State<GameScreen> {
   void didChangeDependencies() {
     super.didChangeDependencies();
     final game = context.read<GameController>();
+    // The hint and notice texts come from the controller; keep them in the
+    // locale the app is showing right now.
+    game.l10n = AppLocalizations.of(context);
     if (identical(game, _game)) return;
     _game?.notice.removeListener(_onNotice);
     _game?.cue.removeListener(_onCue);
@@ -72,7 +76,20 @@ class _GameScreenState extends State<GameScreen> {
     super.dispose();
   }
 
+  /// Shows the neutral "full but not solved" message without revealing cells.
+  void _onNotice() {
+    final message = _game?.notice.value;
+    if (message == null || !mounted) return;
+    ScaffoldMessenger.maybeOf(
+      context,
+    )?.showSnackBar(SnackBar(content: Text(message)));
+    _game!.notice.value = null;
+  }
+
   /// Plays the sound and the haptic of the last board event (PLAN.md §18).
+  ///
+  /// The controller publishes one cue per event and this listener clears it, so
+  /// a cue is played exactly once.
   void _onCue() {
     final game = _game;
     final cue = game?.cue.value;
@@ -102,16 +119,6 @@ class _GameScreenState extends State<GameScreen> {
     }
   }
 
-  /// Shows the neutral "full but not solved" message without revealing cells.
-  void _onNotice() {
-    final message = _game?.notice.value;
-    if (message == null || !mounted) return;
-    ScaffoldMessenger.maybeOf(
-      context,
-    )?.showSnackBar(SnackBar(content: Text(message)));
-    _game!.notice.value = null;
-  }
-
   /// Starts a game when the screen is entered (or continues the running one).
   void _ensureGame() {
     if (!mounted) return;
@@ -132,11 +139,12 @@ class _GameScreenState extends State<GameScreen> {
   void _startNewPuzzle() {
     final game = context.read<GameController>();
     setState(() => _dialogShown = false);
-    game.startGame(widget.difficulty);
+    game.startGame(widget.difficulty, daily: widget.daily);
   }
 
   Future<void> _showResultDialog() async {
     final game = context.read<GameController>();
+    final l10n = AppLocalizations.of(context);
     if (game.status == GameStatus.lost) {
       await showDialog<void>(
         context: context,
@@ -160,7 +168,7 @@ class _GameScreenState extends State<GameScreen> {
       context: context,
       barrierDismissible: false,
       builder: (dialogContext) => ResultDialog(
-        difficultyLabel: game.cfg.label,
+        difficultyLabel: l10n.difficulty(game.cfg.id),
         seconds: game.elapsedSeconds,
         mistakes: game.mistakes,
         stars: game.stars,
@@ -183,6 +191,7 @@ class _GameScreenState extends State<GameScreen> {
   Widget build(BuildContext context) {
     final game = context.watch<GameController>();
     final theme = Theme.of(context);
+    final l10n = AppLocalizations.of(context);
 
     if (!game.hasGame) {
       return const Scaffold(body: Center(child: CircularProgressIndicator()));
@@ -204,7 +213,10 @@ class _GameScreenState extends State<GameScreen> {
         title: Row(
           mainAxisSize: MainAxisSize.min,
           children: [
-            Text(game.cfg.label, style: TextStyle(color: accent)),
+            Text(
+              l10n.difficulty(game.cfg.id),
+              style: TextStyle(color: accent),
+            ),
             if (game.isDaily) ...[
               const SizedBox(width: 6),
               Icon(Icons.today, size: 18, color: accent),
@@ -215,7 +227,9 @@ class _GameScreenState extends State<GameScreen> {
         ),
         actions: [
           IconButton(
-            tooltip: game.status == GameStatus.paused ? 'Resume' : 'Pause',
+            tooltip: game.status == GameStatus.paused
+                ? l10n.resume
+                : l10n.pause,
             icon: Icon(
               game.status == GameStatus.paused ? Icons.play_arrow : Icons.pause,
             ),
@@ -292,11 +306,14 @@ class _GameScreenState extends State<GameScreen> {
                     children: [
                       const Icon(Icons.pause_circle_outline, size: 56),
                       const SizedBox(height: 12),
-                      Text('Paused', style: theme.textTheme.headlineSmall),
+                      Text(
+                        l10n.paused,
+                        style: theme.textTheme.headlineSmall,
+                      ),
                       const SizedBox(height: 16),
                       FilledButton(
                         onPressed: game.resume,
-                        child: const Text('Resume'),
+                        child: Text(l10n.resume),
                       ),
                     ],
                   ),
@@ -318,12 +335,13 @@ class _StatusRow extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     final theme = Theme.of(context);
+    final l10n = AppLocalizations.of(context);
     final label = switch (cfg.feedback) {
       FeedbackMode.instant => cfg.mistakeLimit > 0
-          ? 'Mistakes: $mistakes / ${cfg.mistakeLimit}'
-          : 'Mistakes: $mistakes',
-      FeedbackMode.conflictsOnly => 'Conflicts only',
-      FeedbackMode.none => 'No feedback',
+          ? l10n.mistakesOf(mistakes, cfg.mistakeLimit)
+          : l10n.mistakesCount(mistakes),
+      FeedbackMode.conflictsOnly => l10n.conflictsOnly,
+      FeedbackMode.none => l10n.noLiveFeedback,
     };
 
     return Padding(

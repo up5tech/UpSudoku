@@ -7,6 +7,8 @@ library;
 import 'package:flutter/foundation.dart';
 import 'package:flutter/material.dart';
 
+import '../../l10n/app_localizations.dart';
+
 /// Elapsed-time display in `mm:ss` (or `h:mm:ss` for long games).
 class GameTimer extends StatelessWidget {
   const GameTimer({super.key, required this.elapsed});
@@ -30,7 +32,7 @@ class GameTimer extends StatelessWidget {
       valueListenable: elapsed,
       builder: (context, value, _) {
         return Semantics(
-          label: 'Elapsed time ${format(value)}',
+          label: AppLocalizations.of(context).elapsedTime(format(value)),
           child: Text(
             format(value),
             style: Theme.of(context).textTheme.titleMedium?.copyWith(

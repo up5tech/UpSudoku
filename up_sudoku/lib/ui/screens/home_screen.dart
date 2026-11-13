@@ -12,6 +12,7 @@ import '../../data/puzzle_repository.dart';
 import '../../data/storage_service.dart';
 import '../../domain/models/daily_record.dart';
 import '../../domain/models/difficulty.dart';
+import '../../l10n/app_localizations.dart';
 import '../widgets/game_timer.dart';
 import 'game_screen.dart';
 import 'how_to_play_screen.dart';
@@ -28,12 +29,17 @@ class HomeScreen extends StatelessWidget {
     final stats = context.watch<StatsController>();
     final storage = context.watch<StorageService>();
     final game = context.watch<GameController>();
+    final l10n = AppLocalizations.of(context);
 
     final now = DateTime.now();
     final daily = dailyDifficulty(now);
     final dailyRecord = storage.readDaily();
 
-    void open(Difficulty difficulty, {bool dailyGame = false, bool newGame = false}) {
+    void open(
+      Difficulty difficulty, {
+      bool dailyGame = false,
+      bool newGame = false,
+    }) {
       Navigator.of(context).push(
         MaterialPageRoute<void>(
           builder: (_) => GameScreen(
@@ -50,21 +56,21 @@ class HomeScreen extends StatelessWidget {
         title: const Text(kAppName),
         actions: [
           IconButton(
-            tooltip: 'Statistics',
+            tooltip: l10n.statistics,
             icon: const Icon(Icons.bar_chart),
             onPressed: () => Navigator.of(context).push(
               MaterialPageRoute<void>(builder: (_) => const StatsScreen()),
             ),
           ),
           IconButton(
-            tooltip: 'How to play',
+            tooltip: l10n.howToPlay,
             icon: const Icon(Icons.help_outline),
             onPressed: () => Navigator.of(context).push(
               MaterialPageRoute<void>(builder: (_) => const HowToPlayScreen()),
             ),
           ),
           IconButton(
-            tooltip: 'Settings',
+            tooltip: l10n.settings,
             icon: const Icon(Icons.settings_outlined),
             onPressed: () => Navigator.of(context).push(
               MaterialPageRoute<void>(builder: (_) => const SettingsScreen()),
@@ -118,8 +124,12 @@ class _DailyCard extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     final theme = Theme.of(context);
+    final l10n = AppLocalizations.of(context);
     final accent = accentColorFor(difficulty);
     final done = record.isCompletedOn(date);
+    final streak = record.streak > 0
+        ? ' · ${l10n.dayStreak(record.streak)}'
+        : '';
 
     return Card(
       margin: EdgeInsets.zero,
@@ -134,21 +144,20 @@ class _DailyCard extends StatelessWidget {
                 Icon(Icons.today, color: accent),
                 const SizedBox(width: 8),
                 Text(
-                  'Daily puzzle',
+                  l10n.dailyPuzzle,
                   style: theme.textTheme.titleMedium?.copyWith(
                     fontWeight: FontWeight.w700,
                   ),
                 ),
                 const Spacer(),
-                if (done)
-                  Icon(Icons.check_circle, color: accent, size: 20),
+                if (done) Icon(Icons.check_circle, color: accent, size: 20),
               ],
             ),
             const SizedBox(height: 6),
             Text(
-              '${kDifficulties[difficulty]!.label} · '
-              '${done ? 'completed today' : 'same puzzle for everyone'}'
-              '${record.streak > 0 ? ' · ${record.streak} day streak' : ''}',
+              '${l10n.difficulty(difficulty)} · '
+              '${done ? l10n.dailyCompleted : l10n.dailySameEveryday}'
+              '$streak',
               style: theme.textTheme.bodySmall,
             ),
             const SizedBox(height: 10),
@@ -157,7 +166,7 @@ class _DailyCard extends StatelessWidget {
               child: FilledButton.icon(
                 onPressed: onPlay,
                 icon: Icon(done ? Icons.replay : Icons.play_arrow),
-                label: Text(done ? 'Play daily again' : 'Play daily'),
+                label: Text(done ? l10n.playDailyAgain : l10n.playDaily),
                 style: FilledButton.styleFrom(backgroundColor: accent),
               ),
             ),
@@ -190,6 +199,7 @@ class _DifficultyCard extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     final theme = Theme.of(context);
+    final l10n = AppLocalizations.of(context);
     final cfg = kDifficulties[difficulty]!;
     final accent = accentColorFor(difficulty);
 
@@ -212,7 +222,7 @@ class _DifficultyCard extends StatelessWidget {
                 ),
                 const SizedBox(width: 8),
                 Text(
-                  cfg.label,
+                  l10n.difficulty(difficulty),
                   style: theme.textTheme.titleLarge?.copyWith(
                     color: accent,
                     fontWeight: FontWeight.w700,
@@ -221,22 +231,25 @@ class _DifficultyCard extends StatelessWidget {
                 const Spacer(),
                 if (bestTime != null)
                   Text(
-                    'Best ${GameTimer.format(bestTime!)}',
+                    l10n.bestTime(GameTimer.format(bestTime!)),
                     style: theme.textTheme.labelMedium,
                   ),
               ],
             ),
             const SizedBox(height: 8),
-            Text(_description(difficulty), style: theme.textTheme.bodyMedium),
+            Text(
+              l10n.difficultyDescription(difficulty),
+              style: theme.textTheme.bodyMedium,
+            ),
             const SizedBox(height: 8),
             Wrap(
               spacing: 6,
               runSpacing: 6,
               children: [
-                _Badge(text: _feedbackBadge(cfg.feedback)),
-                _Badge(text: '${cfg.hintLimit} hints'),
+                _Badge(text: l10n.feedbackBadge(cfg.feedback)),
+                _Badge(text: l10n.hintsBadge(cfg.hintLimit)),
                 if (cfg.mistakeLimit > 0)
-                  _Badge(text: '${cfg.mistakeLimit} mistakes'),
+                  _Badge(text: l10n.mistakesBadge(cfg.mistakeLimit)),
               ],
             ),
             const SizedBox(height: 12),
@@ -244,8 +257,8 @@ class _DifficultyCard extends StatelessWidget {
               children: [
                 Text(
                   poolSize > 0
-                      ? '$completed/$poolSize solved'
-                      : 'Pool coming soon',
+                      ? l10n.solvedCount(completed, poolSize)
+                      : l10n.poolComingSoon,
                   style: theme.textTheme.labelMedium?.copyWith(
                     color: theme.colorScheme.onSurfaceVariant,
                   ),
@@ -254,14 +267,14 @@ class _DifficultyCard extends StatelessWidget {
                 if (hasSaved) ...[
                   OutlinedButton(
                     onPressed: onContinue,
-                    child: const Text('Continue'),
+                    child: Text(l10n.continueGame),
                   ),
                   const SizedBox(width: 8),
                 ],
                 FilledButton.icon(
                   onPressed: onPlay,
                   icon: const Icon(Icons.play_arrow),
-                  label: const Text('Play'),
+                  label: Text(l10n.play),
                   style: FilledButton.styleFrom(backgroundColor: accent),
                 ),
               ],
@@ -271,19 +284,6 @@ class _DifficultyCard extends StatelessWidget {
       ),
     );
   }
-
-  String _description(Difficulty difficulty) => switch (difficulty) {
-    Difficulty.easy => 'Solved with singles — a gentle start.',
-    Difficulty.medium => 'Pairs, triples and pointing — a warm-up.',
-    Difficulty.hard => 'Fish and wings — real deductions needed.',
-    Difficulty.veryHard => 'Chains and beyond — for the brave.',
-  };
-
-  String _feedbackBadge(FeedbackMode feedback) => switch (feedback) {
-    FeedbackMode.instant => 'Instant feedback',
-    FeedbackMode.conflictsOnly => 'Conflicts only',
-    FeedbackMode.none => 'No live feedback',
-  };
 }
 
 class _Badge extends StatelessWidget {
