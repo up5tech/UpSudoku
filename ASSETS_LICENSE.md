@@ -16,10 +16,20 @@ assets at runtime.
 
 ## Audio
 
-Sound effects (`assets/audio/tap.mp3`, `place.mp3`, `error.mp3`,
-`unit_complete.mp3`, `win.mp3`) are not bundled yet; they are added in Phase 8
-and must be recorded here with source and license before release.
+- Files: `up_sudoku/assets/audio/{tap,place,error,unit_complete,win,lose}.wav`
+- Source: generated for this project by `up_sudoku/tool/generate_sounds.py`
+  (Python standard library only — synthesised sine/harmonic tones, no samples).
+- License: original work, released with the app; no third-party audio is bundled.
+- Format: 16-bit mono PCM WAV at 44.1 kHz, 4–42 KB per effect. They are played
+  from bundle assets with `AssetSource`; nothing is downloaded.
 
 ## Images
 
-No bundled images yet. The launcher icon (Phase 8) must be recorded here.
+- Files: `up_sudoku/assets/images/icon.png`, `icon_foreground.png`, the Android
+  splash art (`android/app/src/main/res/drawable-nodpi/launch_image.png`) and the
+  iOS `LaunchImage` set.
+- Source: generated for this project by `up_sudoku/tool/generate_icon.dart` (a
+  pure-Dart 1024×1024 drawing encoded as PNG, no third-party artwork).
+- License: original work, released with the app.
+- Platform launcher icons are produced from `assets/images/icon.png` with
+  `flutter_launcher_icons` (config in `up_sudoku/pubspec.yaml`).

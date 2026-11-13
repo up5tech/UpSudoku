@@ -16,6 +16,7 @@ Guidance for coding agents working on **UpSudoku**: a fully offline Flutter/Dart
 | State management | `provider` + `ChangeNotifier` |
 | Storage | `shared_preferences` |
 | Audio | `audioplayers` (local `AssetSource` files) |
+| Icons / splash | `flutter_launcher_icons` + generated artwork |
 | Board rendering | One `CustomPainter` canvas, arithmetic hit-testing |
 | Background work | `compute()` (Isolates) for hints / runtime generation |
 | Platforms | Android + iOS primary; Web/Desktop optional |
@@ -59,10 +60,12 @@ up_sudoku/
 ├─ tool/
 │  ├─ generate_puzzles.dart    # builds + grades pools
 │  ├─ validate_puzzles.dart    # enforces the quality gates
-│  └─ measure_yield.dart       # real generate() yield + pool distribution
+│  ├─ measure_yield.dart       # real generate() yield + pool distribution
+│  ├─ generate_sounds.py       # synthesises assets/audio/*.wav
+│  └─ generate_icon.dart       # draws the icon, adaptive foreground and splash art
 ├─ lib/
 │  ├─ main.dart, app.dart
-│  ├─ core/{constants.dart,theme.dart}
+│  ├─ core/{constants.dart,theme.dart,sound_cue.dart}
 │  ├─ domain/
 │  │  ├─ sudoku_constants.dart
 │  │  ├─ models/{difficulty.dart,puzzle_entry.dart,save_data.dart}
@@ -270,7 +273,7 @@ Run `validate_puzzles.dart` whenever the grader or technique order changes — t
 | 5 | Tier 2 & 3 techniques, soundness test, full pools | ✅ |
 | 6 | Hints (3 stages + fallback), check board, scoring & stars | ✅ |
 | 7 | Persistence, stats, settings, daily puzzle | ✅ |
-| 8 | Polish, audio/haptics/theme/i18n, playtests, release | ☐ |
+| 8 | Polish, audio/haptics/theme/i18n, playtests, release | 🟡 audio, haptics, icon/splash done; i18n, playtests, signing open |
 
 Order matters: do not build UI polish before the puzzle pipeline and grader are correct — difficulty quality is the core value of this app.
 

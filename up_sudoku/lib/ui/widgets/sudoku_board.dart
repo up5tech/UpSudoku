@@ -8,7 +8,9 @@ import 'package:provider/provider.dart';
 
 import '../../controllers/game_controller.dart';
 import '../../controllers/settings_controller.dart';
+import '../../core/sound_cue.dart';
 import '../../core/theme.dart';
+import '../../data/audio_service.dart';
 import 'sudoku_painter.dart';
 
 /// Renders the board and maps taps to cells.
@@ -40,6 +42,7 @@ class SudokuBoard extends StatelessWidget {
                 final row = (details.localPosition.dy / cell)
                     .floor()
                     .clamp(0, 8);
+                context.read<AudioService>().play(SoundCue.tap);
                 game.select(row * 9 + col);
               },
               child: RepaintBoundary(

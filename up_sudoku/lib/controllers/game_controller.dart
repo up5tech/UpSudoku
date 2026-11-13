@@ -6,6 +6,7 @@ import 'dart:math';
 
 import 'package:flutter/foundation.dart';
 
+import '../core/sound_cue.dart';
 import '../data/puzzle_repository.dart';
 import '../data/storage_service.dart';
 import '../domain/logic/grader.dart';
@@ -115,6 +116,10 @@ class GameController extends ChangeNotifier {
   /// Fires every second so the timer widget can repaint without rebuilding
   /// the board.
   final ValueNotifier<int> elapsed = ValueNotifier<int>(0);
+
+  /// One-shot sound cue of the last board event, consumed by the UI
+  /// (PLAN.md §18). Null means "nothing to play".
+  final ValueNotifier<SoundCue?> cue = ValueNotifier<SoundCue?>(null);
 
   final List<List<CellChange>> _undo = [];
   final List<List<CellChange>> _redo = [];
@@ -530,7 +535,14 @@ class GameController extends ChangeNotifier {
         _finish(GameStatus.lost);
         return;
       }
+      cue.value = SoundCue.error;
       notifyListeners();
+    } else {
+      // Deferred-feedback modes must stay silent about correctness, so a
+      // wrong-but-accepted digit sounds exactly like a correct one.
+      cue.value = _completesUnit(i)
+          ? SoundCue.unitComplete
+          : SoundCue.place;
     }
     _checkWin();
   }
@@ -622,8 +634,25 @@ class GameController extends ChangeNotifier {
     notice.value = 'The board is full but something is still wrong.';
   }
 
+  /// True when [cell] completes a row, column or box correctly.
+  bool _completesUnit(int cell) {
+    for (final unit in kUnits) {
+      if (!unit.contains(cell)) continue;
+      var complete = true;
+      for (final c in unit) {
+        if (values[c] != entry.solution[c]) {
+          complete = false;
+          break;
+        }
+      }
+      if (complete) return true;
+    }
+    return false;
+  }
+
   void _finish(GameStatus result) {
     status = result;
+    cue.value = result == GameStatus.won ? SoundCue.win : SoundCue.lose;
     _timer?.cancel();
     _timer = null;
     if (result == GameStatus.won) {
@@ -675,6 +704,7 @@ class GameController extends ChangeNotifier {
     _timer = null;
     elapsed.dispose();
     notice.dispose();
+    cue.dispose();
     super.dispose();
   }
 }

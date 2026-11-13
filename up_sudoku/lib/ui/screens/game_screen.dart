@@ -1,11 +1,17 @@
 /// The screen where a puzzle is played.
 library;
 
+import 'dart:async';
+
 import 'package:flutter/material.dart';
+import 'package:flutter/services.dart';
 import 'package:provider/provider.dart';
 
+import '../../controllers/settings_controller.dart';
+import '../../core/sound_cue.dart';
 import '../../core/theme.dart';
 import '../../controllers/game_controller.dart';
+import '../../data/audio_service.dart';
 import '../../domain/models/difficulty.dart';
 import '../widgets/game_timer.dart';
 import '../widgets/game_toolbar.dart';
@@ -53,14 +59,47 @@ class _GameScreenState extends State<GameScreen> {
     final game = context.read<GameController>();
     if (identical(game, _game)) return;
     _game?.notice.removeListener(_onNotice);
+    _game?.cue.removeListener(_onCue);
     _game = game;
     game.notice.addListener(_onNotice);
+    game.cue.addListener(_onCue);
   }
 
   @override
   void dispose() {
     _game?.notice.removeListener(_onNotice);
+    _game?.cue.removeListener(_onCue);
     super.dispose();
+  }
+
+  /// Plays the sound and the haptic of the last board event (PLAN.md §18).
+  void _onCue() {
+    final game = _game;
+    final cue = game?.cue.value;
+    if (game == null || cue == null) return;
+    game.cue.value = null;
+    if (!mounted) return;
+    context.read<AudioService>().play(cue);
+    if (context.read<SettingsController>().haptics) _haptic(cue);
+  }
+
+  void _haptic(SoundCue cue) {
+    switch (cue) {
+      case SoundCue.tap:
+        // Selection stays silent in the hand: no buzz on every tap.
+        break;
+      case SoundCue.place:
+        unawaited(HapticFeedback.lightImpact());
+        break;
+      case SoundCue.error:
+      case SoundCue.lose:
+        unawaited(HapticFeedback.heavyImpact());
+        break;
+      case SoundCue.unitComplete:
+      case SoundCue.win:
+        unawaited(HapticFeedback.mediumImpact());
+        break;
+    }
   }
 
   /// Shows the neutral "full but not solved" message without revealing cells.

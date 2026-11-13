@@ -2,6 +2,7 @@ import 'package:flutter_test/flutter_test.dart';
 import 'package:shared_preferences/shared_preferences.dart';
 import 'package:up_sudoku/controllers/game_controller.dart';
 import 'package:up_sudoku/controllers/stats_controller.dart';
+import 'package:up_sudoku/core/sound_cue.dart';
 import 'package:up_sudoku/data/puzzle_repository.dart';
 import 'package:up_sudoku/data/storage_service.dart';
 import 'package:up_sudoku/domain/logic/logic_state.dart';
@@ -88,6 +89,11 @@ int _wrongDigit(GameController game, int cell) {
   final solution = game.entry.solution[cell];
   return solution == 9 ? 1 : solution + 1;
 }
+
+List<int> _emptyCells(GameController game) => [
+  for (var i = 0; i < kCellCount; i++)
+    if (game.values[i] == 0) i,
+];
 
 void main() {
   TestWidgetsFlutterBinding.ensureInitialized();
@@ -748,6 +754,86 @@ void main() {
       final daily = storage.readDaily();
       expect(daily.isCompletedOn(today), isTrue);
       expect(daily.streak, 1);
+    });
+
+    test('a correct digit cues a place, a wrong one an error', () {
+      game = GameController();
+      game.startGame(Difficulty.easy, specific: _entry());
+      final empties = _emptyCells(game);
+
+      game.select(empties[0]);
+      game.inputDigit(game.entry.solution[empties[0]]);
+      expect(game.cue.value, SoundCue.place);
+
+      game.cue.value = null;
+      game.select(empties[1]);
+      game.inputDigit(_wrongDigit(game, empties[1]));
+      expect(game.cue.value, SoundCue.error);
+    });
+
+    test('deferred feedback never cues an error', () {
+      game = GameController();
+      game.startGame(Difficulty.hard, specific: _entry(Difficulty.hard));
+      final empty = _emptyCells(game).first;
+
+      game.select(empty);
+      game.inputDigit(_wrongDigit(game, empty));
+
+      expect(game.mistakes, 0);
+      expect(game.cue.value, SoundCue.place);
+    });
+
+    test('completing a unit cues the unit sound', () {
+      game = GameController();
+      game.startGame(Difficulty.easy, specific: _entry());
+
+      // Fill one row up to its last empty cell, then place that digit.
+      final rows = [
+        for (var row = 0; row < 9; row++)
+          [
+            for (var c = 0; c < 9; c++)
+              if (game.values[row * 9 + c] == 0) row * 9 + c,
+          ],
+      ];
+      final empties = rows.firstWhere((r) => r.isNotEmpty);
+      expect(empties.length, greaterThan(1));
+
+      for (final cell in empties.take(empties.length - 1)) {
+        game.select(cell);
+        game.inputDigit(game.entry.solution[cell]);
+      }
+      game.cue.value = null;
+
+      final last = empties.last;
+      game.select(last);
+      game.inputDigit(game.entry.solution[last]);
+
+      expect(game.cue.value, SoundCue.unitComplete);
+    });
+
+    test('winning and losing cue their own sounds', () {
+      game = GameController();
+      game.startGame(Difficulty.easy, specific: _entry());
+      final solution = PuzzleEntry.decode(_solution);
+      for (var i = 0; i < kCellCount; i++) {
+        if (game.values[i] != 0) continue;
+        game.select(i);
+        game.inputDigit(solution[i]);
+      }
+      expect(game.cue.value, SoundCue.win);
+
+      game = GameController();
+      game.startGame(Difficulty.medium, specific: _entry(Difficulty.medium));
+      final empties = [
+        for (var i = 0; i < kCellCount; i++)
+          if (game.values[i] == 0) i,
+      ].take(5).toList();
+      for (final cell in empties) {
+        game.select(cell);
+        game.inputDigit(_wrongDigit(game, cell));
+      }
+      expect(game.status, GameStatus.lost);
+      expect(game.cue.value, SoundCue.lose);
     });
 
     test('starting over a saved game resets the streak', () async {

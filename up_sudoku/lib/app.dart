@@ -1,3 +1,5 @@
+import 'dart:async';
+
 import 'package:flutter/material.dart';
 import 'package:provider/provider.dart';
 
@@ -6,6 +8,7 @@ import 'controllers/settings_controller.dart';
 import 'controllers/stats_controller.dart';
 import 'core/constants.dart';
 import 'core/theme.dart';
+import 'data/audio_service.dart';
 import 'data/puzzle_repository.dart';
 import 'data/storage_service.dart';
 import 'ui/screens/home_screen.dart';
@@ -19,6 +22,7 @@ class UpSudokuApp extends StatefulWidget {
     super.key,
     required this.repository,
     required this.storage,
+    this.audio,
   });
 
   /// The loaded puzzle pools.
@@ -26,6 +30,9 @@ class UpSudokuApp extends StatefulWidget {
 
   /// Local persistence (shared_preferences).
   final StorageService storage;
+
+  /// The sound service; created (and preloaded) by the app when omitted.
+  final AudioService? audio;
 
   @override
   State<UpSudokuApp> createState() => _UpSudokuAppState();
@@ -35,6 +42,7 @@ class _UpSudokuAppState extends State<UpSudokuApp> with WidgetsBindingObserver {
   late final SettingsController _settings;
   late final StatsController _stats;
   late final GameController _game;
+  late final AudioService _audio;
 
   @override
   void initState() {
@@ -46,12 +54,21 @@ class _UpSudokuAppState extends State<UpSudokuApp> with WidgetsBindingObserver {
       storage: widget.storage,
       stats: _stats,
     );
+    _audio = widget.audio ?? AudioService();
+    _syncAudio();
+    _settings.addListener(_syncAudio);
+    if (widget.audio == null) unawaited(_audio.preload());
     WidgetsBinding.instance.addObserver(this);
   }
+
+  /// Keeps the audio service in step with the sound setting.
+  void _syncAudio() => _audio.enabled = _settings.sound;
 
   @override
   void dispose() {
     WidgetsBinding.instance.removeObserver(this);
+    _settings.removeListener(_syncAudio);
+    _audio.dispose();
     _game.dispose();
     _stats.dispose();
     _settings.dispose();
@@ -75,6 +92,7 @@ class _UpSudokuAppState extends State<UpSudokuApp> with WidgetsBindingObserver {
       providers: [
         Provider<PuzzleRepository>.value(value: widget.repository),
         Provider<StorageService>.value(value: widget.storage),
+        Provider<AudioService>.value(value: _audio),
         ChangeNotifierProvider<SettingsController>.value(value: _settings),
         ChangeNotifierProvider<StatsController>.value(value: _stats),
         ChangeNotifierProvider<GameController>.value(value: _game),

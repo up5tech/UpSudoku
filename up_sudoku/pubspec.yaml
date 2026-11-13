@@ -21,13 +21,15 @@ dev_dependencies:
   flutter_lints: ^6.0.0
   flutter_launcher_icons: ^0.14.4
 
-# App icon generation (run once an icon exists at assets/images/icon.png):
+# App icon generation (the artwork comes from `dart run tool/generate_icon.dart`):
 #   dart run flutter_launcher_icons
-# flutter_launcher_icons:
-#   android: true
-#   ios: true
-#   image_path: "assets/images/icon.png"
-#   remove_alpha_ios: true
+flutter_launcher_icons:
+  android: true
+  ios: true
+  image_path: "assets/images/icon.png"
+  remove_alpha_ios: true
+  adaptive_icon_background: "#3F51B5"
+  adaptive_icon_foreground: "assets/images/icon_foreground.png"
 
 flutter:
   uses-material-design: true
