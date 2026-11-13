@@ -858,7 +858,7 @@ class PuzzleGenerator {
 }
 ```
 
-**Efficiency improvement (implemented):** instead of digging to the target and grading once, `PuzzleGenerator._digWithGrade` re-grades after each successful removal and stops as soon as the puzzle reaches the desired tier (and givens are in range). Because removing clues generally makes puzzles harder, this raises the yield enormously: with the full grader a 200-puzzle Medium pool takes ~3 s and 200 Hard puzzles ~4 s; 120 Very Hard puzzles took ~5 s with seed 42.
+**Efficiency improvement (implemented):** instead of digging to the target and grading once, `PuzzleGenerator._digWithGrade` re-grades after each successful removal and stops as soon as the puzzle reaches the desired tier (and givens are in range). Because removing clues generally makes puzzles harder, this raises the yield enormously: with the full grader a 200-puzzle Medium pool takes ~3 s and 200 Hard puzzles ~4 s; 120 Very Hard puzzles took ~5 s with seed 42. Measured per dig attempt (`dart run tool/measure_yield.dart`): 1 attempt in ~1 (Easy), ~90 (Medium), ~34 (Hard) and ~43 (Very Hard) produces a puzzle — a dig is cheap, so a pool still fills in seconds.
 
 **Yield caveat:** many random puzzles will not match the requested tier (especially Very Hard). Measure the acceptance rate for each difficulty during Phase 2 and let the generation script run longer (or overnight) for Very Hard; do not lower the tier standard to hit a pool size.
 
