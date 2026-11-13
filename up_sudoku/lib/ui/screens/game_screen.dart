@@ -310,7 +310,9 @@ class _GameScreenState extends State<GameScreen> {
           if (game.status == GameStatus.paused)
             Positioned.fill(
               child: ColoredBox(
-                color: theme.colorScheme.surface.withValues(alpha: 0.97),
+                // Opaque: a translucent scrim would let the board be read
+                // through the overlay while the timer is stopped.
+                color: theme.colorScheme.surface,
                 child: Center(
                   child: Column(
                     mainAxisSize: MainAxisSize.min,

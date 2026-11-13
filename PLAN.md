@@ -2417,7 +2417,9 @@ release manifest has no `INTERNET` permission.
 > The selected cell in the dark board also uses a blended tint instead of a 45 %
 > accent wash, so the player's digit stays legible, and the hint panel's actions
 > shrink below 360 px wide so a Vietnamese explanation no longer wraps with one
-> orphan word.
+> orphan word. The pause overlay is now painted with the opaque surface colour
+> (§1685 says the board is hidden; at 97 % it was still faintly readable), and
+> both themes were re-checked at 390×844 and 320×568.
 > **Still open:** high-contrast theme, human playtests and the tuning they imply,
 > store screenshots/listing, signing keys (`key.properties` is never committed)
 > and the two-device manual run — the release build has not been produced yet.
