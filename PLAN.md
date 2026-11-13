@@ -2403,6 +2403,11 @@ release manifest has no `INTERNET` permission.
 > selected tick so "Hệ thống" stays on one line. `test/layout_test` now pumps
 > every screen at 320×568 in Vietnamese with the bundled font and fails on any
 > render overflow.
+> **Adaptive number pad** — the pad is `28 %` of the body height clamped to
+> 140–210 px, so phones at 390×844 and taller keep the original 210 px look while
+> a 320×568 screen hands ~65 px back to the square board. Digit buttons scale
+> their digit/count with `FittedBox` only when the buttons get shorter than the
+> natural text, so nothing overflows and normal phones are pixel-identical.
 > **Still open:** high-contrast theme, human playtests and the tuning they imply,
 > store screenshots/listing, signing keys (`key.properties` is never committed)
 > and the two-device manual run — the release build has not been produced yet.

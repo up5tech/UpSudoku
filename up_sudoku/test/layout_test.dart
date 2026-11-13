@@ -13,6 +13,7 @@ import 'package:up_sudoku/ui/screens/game_screen.dart';
 import 'package:up_sudoku/ui/screens/how_to_play_screen.dart';
 import 'package:up_sudoku/ui/screens/settings_screen.dart';
 import 'package:up_sudoku/ui/screens/stats_screen.dart';
+import 'package:up_sudoku/ui/widgets/number_pad.dart';
 
 /// Test fonts are a fixed-width placeholder by default; loading the real ones
 /// measures the same text the player sees.
@@ -75,8 +76,23 @@ void main() {
     await tester.pumpAndSettle();
 
     await tester.tap(find.widgetWithText(FilledButton, 'Chơi').first);
-    await tester.pumpAndSettle();
+    // Bounded pumps: the running game rebuilds its timer every second, so
+    // pumpAndSettle would never settle.
+    await tester.pump();
+    await tester.pump(const Duration(milliseconds: 300));
     expect(find.byType(GameScreen), findsOneWidget);
     expect(tester.takeException(), isNull, reason: 'game');
+
+    // Short screens give the space to the board instead of the pad.
+    final pad = tester.getSize(find.byType(NumberPad));
+    expect(pad.height, lessThan(210));
+    expect(pad.height, greaterThanOrEqualTo(140));
+
+    // A normal phone keeps the pad exactly as designed.
+    await tester.binding.setSurfaceSize(const Size(390, 844));
+    await tester.pump();
+    await tester.pump(const Duration(milliseconds: 300));
+    expect(tester.takeException(), isNull, reason: 'normal phone');
+    expect(tester.getSize(find.byType(NumberPad)).height, 210);
   });
 }

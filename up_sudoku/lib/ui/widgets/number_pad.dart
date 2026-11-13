@@ -105,24 +105,32 @@ class _DigitButton extends StatelessWidget {
         child: InkWell(
           borderRadius: BorderRadius.circular(12),
           onTap: used ? null : () => onPressed(digit),
-          child: Column(
-            mainAxisAlignment: MainAxisAlignment.center,
-            children: [
-              Text(
-                '$digit',
-                style: theme.textTheme.headlineSmall?.copyWith(
-                  color: color,
-                  fontWeight: FontWeight.w700,
-                  fontSize: notesMode ? 20 : null,
-                ),
+          // Scale the digit down on very short screens instead of overflowing.
+          // The natural size still fits on a normal phone, so nothing changes
+          // there.
+          child: Center(
+            child: FittedBox(
+              fit: BoxFit.scaleDown,
+              child: Column(
+                mainAxisSize: MainAxisSize.min,
+                children: [
+                  Text(
+                    '$digit',
+                    style: theme.textTheme.headlineSmall?.copyWith(
+                      color: color,
+                      fontWeight: FontWeight.w700,
+                      fontSize: notesMode ? 20 : null,
+                    ),
+                  ),
+                  Text(
+                    '$remaining',
+                    style: theme.textTheme.labelSmall?.copyWith(
+                      color: theme.colorScheme.onSurfaceVariant,
+                    ),
+                  ),
+                ],
               ),
-              Text(
-                '$remaining',
-                style: theme.textTheme.labelSmall?.copyWith(
-                  color: theme.colorScheme.onSurfaceVariant,
-                ),
-              ),
-            ],
+            ),
           ),
         ),
       ),

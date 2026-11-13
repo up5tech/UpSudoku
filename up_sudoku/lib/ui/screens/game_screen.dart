@@ -245,56 +245,67 @@ class _GameScreenState extends State<GameScreen> {
       ),
       body: Stack(
         children: [
-          Column(
-            children: [
-              _StatusRow(cfg: game.cfg, mistakes: game.mistakes),
-              if (game.hintStage != null)
-                HintPanel(
-                  title: game.hintTitle,
-                  explanation: game.hintExplanation,
-                  stage: game.hintStage!,
-                  revealsCell: game.hintRevealsCell,
-                  onMore: game.showHintDetails,
-                  onApply: game.applyHint,
-                  onClose: game.closeHint,
-                ),
-              Expanded(child: const SudokuBoard()),
-              GameToolbar(
-                enabled: game.isPlaying,
-                canUndo: game.canUndo,
-                canRedo: game.canRedo,
-                notesMode: game.notesMode,
-                hintsLeft: game.hintsLeft,
-                checksLeft: game.checksLeft,
-                onUndo: game.undo,
-                onRedo: game.redo,
-                onErase: game.erase,
-                onToggleNotes: game.toggleNotesMode,
-                onHint: game.cfg.hintLimit > 0
-                    ? (game.canAskHint ? game.requestHint : null)
-                    : null,
-                onCheck: game.cfg.checkLimit > 0
-                    ? (game.canCheck ? game.checkBoard : null)
-                    : null,
-                onFillNotes: game.cfg.allowAutoFillNotes
-                    ? game.fillAllNotes
-                    : null,
-              ),
-              Padding(
-                padding: const EdgeInsets.fromLTRB(16, 4, 16, 16),
-                child: SizedBox(
-                  height: 210,
-                  child: NumberPad(
-                    remaining: [
-                      for (var d = 1; d <= 9; d++) game.remaining(d),
-                    ],
-                    onDigit: game.inputDigit,
-                    accent: accent,
+          // The pad takes about a quarter of the body height, capped at its
+          // design size, so short screens give the extra room to the board
+          // instead of shrinking it to a thumbnail.
+          LayoutBuilder(
+            builder: (context, constraints) {
+              final padHeight = (constraints.maxHeight * 0.28).clamp(
+                140.0,
+                210.0,
+              );
+              return Column(
+                children: [
+                  _StatusRow(cfg: game.cfg, mistakes: game.mistakes),
+                  if (game.hintStage != null)
+                    HintPanel(
+                      title: game.hintTitle,
+                      explanation: game.hintExplanation,
+                      stage: game.hintStage!,
+                      revealsCell: game.hintRevealsCell,
+                      onMore: game.showHintDetails,
+                      onApply: game.applyHint,
+                      onClose: game.closeHint,
+                    ),
+                  Expanded(child: const SudokuBoard()),
+                  GameToolbar(
+                    enabled: game.isPlaying,
+                    canUndo: game.canUndo,
+                    canRedo: game.canRedo,
                     notesMode: game.notesMode,
+                    hintsLeft: game.hintsLeft,
+                    checksLeft: game.checksLeft,
+                    onUndo: game.undo,
+                    onRedo: game.redo,
+                    onErase: game.erase,
+                    onToggleNotes: game.toggleNotesMode,
+                    onHint: game.cfg.hintLimit > 0
+                        ? (game.canAskHint ? game.requestHint : null)
+                        : null,
+                    onCheck: game.cfg.checkLimit > 0
+                        ? (game.canCheck ? game.checkBoard : null)
+                        : null,
+                    onFillNotes: game.cfg.allowAutoFillNotes
+                        ? game.fillAllNotes
+                        : null,
                   ),
-                ),
-              ),
-            ],
+                  Padding(
+                    padding: const EdgeInsets.fromLTRB(16, 4, 16, 16),
+                    child: SizedBox(
+                      height: padHeight,
+                      child: NumberPad(
+                        remaining: [
+                          for (var d = 1; d <= 9; d++) game.remaining(d),
+                        ],
+                        onDigit: game.inputDigit,
+                        accent: accent,
+                        notesMode: game.notesMode,
+                      ),
+                    ),
+                  ),
+                ],
+              );
+            },
           ),
           if (game.status == GameStatus.paused)
             Positioned.fill(
