@@ -7,10 +7,14 @@ import '../../l10n/app_localizations.dart';
 
 /// Exact height of the icons-only toolbar.
 ///
-/// The compact toolbar is laid out in a fixed-height row (it scales down rather
-/// than wrapping), so this is a real measurement the game layout can subtract
-/// when it sizes the board pane instead of guessing at a toolbar height.
-const double kCompactToolbarHeight = 38.0;
+/// The compact toolbar is laid out in a fixed-height row that scrolls sideways
+/// instead of wrapping or shrinking, so this is a real measurement the game
+/// layout can subtract when it sizes the board pane instead of guessing at a
+/// toolbar height. 48 dp also keeps every icon button a full touch target.
+const double kCompactToolbarHeight = 48.0;
+
+/// Smallest touch target of a compact toolbar button.
+const double kCompactToolbarMinButton = 48.0;
 
 /// Actions on the board: undo/redo, erase, notes, hint, check and the
 /// auto-fill helper. Items that do not apply to a difficulty are hidden.
@@ -132,12 +136,22 @@ class GameToolbar extends StatelessWidget {
     if (compact) {
       // One row of exactly [kCompactToolbarHeight]: the game layout subtracts
       // this height when it sizes the board pane, so the bar must not wrap to a
-      // second row and leave the board short of width.
+      // second row and leave the board short of width. When the row is wider
+      // than a narrow board pane it scrolls, because shrinking the buttons would
+      // take them below a comfortable touch target.
       return SizedBox(
         height: kCompactToolbarHeight,
-        child: FittedBox(
-          fit: BoxFit.scaleDown,
-          child: Row(mainAxisSize: MainAxisSize.min, children: buttons),
+        child: LayoutBuilder(
+          builder: (context, constraints) => SingleChildScrollView(
+            scrollDirection: Axis.horizontal,
+            child: ConstrainedBox(
+              constraints: BoxConstraints(minWidth: constraints.maxWidth),
+              child: Row(
+                mainAxisAlignment: MainAxisAlignment.spaceEvenly,
+                children: buttons,
+              ),
+            ),
+          ),
         ),
       );
     }
@@ -185,6 +199,13 @@ class _ToolbarButton extends StatelessWidget {
           onTap: onPressed,
           borderRadius: BorderRadius.circular(12),
           child: Container(
+            constraints: compact
+                ? const BoxConstraints(
+                    minWidth: kCompactToolbarMinButton,
+                    minHeight: kCompactToolbarMinButton,
+                  )
+                : null,
+            alignment: compact ? Alignment.center : null,
             padding: EdgeInsets.symmetric(
               horizontal: compact ? 12 : 10,
               vertical: compact ? 8 : 6,

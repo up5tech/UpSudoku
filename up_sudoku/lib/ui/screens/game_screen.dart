@@ -329,16 +329,21 @@ class _GameScreenState extends State<GameScreen> {
                   children: [
                     SizedBox(
                       width: boardPaneWidth,
-                      child: Padding(
-                        padding: const EdgeInsets.symmetric(
-                          horizontal: boardMargin,
-                        ),
-                        child: Column(
-                          children: [
-                            const Expanded(child: SudokuBoard()),
-                            toolbar,
-                          ],
-                        ),
+                      // The margin belongs to the board only: the toolbar spans
+                      // the full pane so its buttons keep their touch size on a
+                      // landscape phone instead of scrolling by a few pixels.
+                      child: Column(
+                        children: [
+                          const Expanded(
+                            child: Padding(
+                              padding: EdgeInsets.symmetric(
+                                horizontal: boardMargin,
+                              ),
+                              child: SudokuBoard(),
+                            ),
+                          ),
+                          toolbar,
+                        ],
                       ),
                     ),
                     SizedBox(

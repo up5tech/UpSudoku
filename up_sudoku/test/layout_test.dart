@@ -207,6 +207,41 @@ void main() {
       minBoard: 200,
       maxGutter: 24,
     );
+    // A short, narrow window keeps the two-pane layout but leaves the board
+    // pane narrower than the toolbar row: the bar must scroll, not shrink its
+    // buttons below a 48 px touch target.
+    await checkGameAt(
+      'narrow wide screen 480x360',
+      const Size(480, 360),
+      minBoard: 140,
+      maxGutter: 24,
+    );
+    final bar = tester.getSize(find.byType(GameToolbar));
+    expect(bar.height, kCompactToolbarHeight, reason: 'narrow bar height');
+    final scrollable = tester.state<ScrollableState>(
+      find.descendant(
+        of: find.byType(GameToolbar),
+        matching: find.byType(Scrollable),
+      ),
+    );
+    // The row really is wider than the pane here, so this covers the scrolling
+    // path rather than a bar that happens to fit.
+    expect(
+      scrollable.position.maxScrollExtent,
+      greaterThan(0),
+      reason: 'narrow bar scrolls',
+    );
+    final buttons = find.descendant(
+      of: find.byType(GameToolbar),
+      matching: find.byType(InkWell),
+    );
+    expect(buttons, findsWidgets);
+    for (var i = 0; i < buttons.evaluate().length; i++) {
+      final size = tester.getSize(buttons.at(i));
+      expect(size.width, greaterThanOrEqualTo(kCompactToolbarMinButton));
+      expect(size.height, greaterThanOrEqualTo(kCompactToolbarMinButton));
+    }
+
     await checkHintAt(
       'landscape phone 844x390 with a hint',
       const Size(844, 390),

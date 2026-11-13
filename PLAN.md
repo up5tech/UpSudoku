@@ -2438,8 +2438,10 @@ release manifest has no `INTERNET` permission.
 > remaining pixel goes to the control column (`layout_test` fails if the board
 > floats more than 24 px of gutter on a wide screen). `kCompactToolbarHeight`
 > lives in `game_toolbar.dart`: the icons-only bar is a fixed-height row that
-> scales down instead of wrapping, so the height the layout subtracts is the
-> height it really gets, and `layout_test` asserts it on every wide case. On a
+> scrolls sideways when a pane is too narrow, so the height the layout subtracts
+> is the height it really gets, and `layout_test` asserts it on every wide case.
+> Its buttons keep `kCompactToolbarMinButton` (48 dp) so scrolling never trades
+> a touch target for width; a 480×360 window is the narrow case in the test. On a
 > tablet that gives the board ~650 px and the pad a ~330 px column with the pad
 > centred vertically.
 > **Localized technique names** — hint headlines used the English names from the
