@@ -46,7 +46,7 @@ class _StatsCard extends StatelessWidget {
   Widget build(BuildContext context) {
     final theme = Theme.of(context);
     final l10n = AppLocalizations.of(context);
-    final accent = accentColorFor(difficulty);
+    final accent = accentColorFor(difficulty, brightness: theme.brightness);
 
     return Card(
       margin: const EdgeInsets.only(bottom: 12),

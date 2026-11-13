@@ -55,7 +55,10 @@ class SudokuBoard extends StatelessWidget {
                     solution: game.entry.solution,
                     selected: game.selected,
                     feedback: game.cfg.feedback,
-                    accent: accentColorFor(game.cfg.id),
+                    accent: accentColorFor(
+                      game.cfg.id,
+                      brightness: theme.brightness,
+                    ),
                     l10n: AppLocalizations.of(context),
                     flagged: Set<int>.of(game.flagged),
                     hint: game.activeHint,

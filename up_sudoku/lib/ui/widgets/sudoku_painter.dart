@@ -109,7 +109,14 @@ class SudokuPainter extends CustomPainter {
 
       if (sel != null) {
         if (i == sel) {
-          color = dark ? accent.withValues(alpha: 0.45) : const Color(0xFFB3D4FF);
+          // A lighter tint in the dark theme: the digit keeps its accent
+          // colour, so a strong wash would swallow it.
+          color = dark
+              ? Color.alphaBlend(
+                  accent.withValues(alpha: 0.32),
+                  const Color(0xFF1E2430),
+                )
+              : const Color(0xFFB3D4FF);
         } else if (highlightPeers && peers.contains(i)) {
           color = dark ? const Color(0xFF2A3345) : const Color(0xFFEAF2FF);
         } else if (highlightSameDigit &&

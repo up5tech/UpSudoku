@@ -125,7 +125,7 @@ class _DailyCard extends StatelessWidget {
   Widget build(BuildContext context) {
     final theme = Theme.of(context);
     final l10n = AppLocalizations.of(context);
-    final accent = accentColorFor(difficulty);
+    final accent = accentColorFor(difficulty, brightness: theme.brightness);
     final done = record.isCompletedOn(date);
     final streak = record.streak > 0
         ? ' · ${l10n.dayStreak(record.streak)}'
@@ -201,7 +201,7 @@ class _DifficultyCard extends StatelessWidget {
     final theme = Theme.of(context);
     final l10n = AppLocalizations.of(context);
     final cfg = kDifficulties[difficulty]!;
-    final accent = accentColorFor(difficulty);
+    final accent = accentColorFor(difficulty, brightness: theme.brightness);
 
     return Card(
       margin: const EdgeInsets.only(bottom: 12),

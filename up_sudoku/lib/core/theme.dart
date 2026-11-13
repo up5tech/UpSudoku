@@ -24,7 +24,7 @@ ThemeData _buildTheme(Brightness brightness) {
   );
 }
 
-/// Accent colour per difficulty (PLAN.md §14.3).
+/// Accent colour per difficulty for the light theme (PLAN.md §14.3).
 const Map<Difficulty, Color> kDifficultyAccents = {
   Difficulty.easy: Color(0xFF2E7D32),
   Difficulty.medium: Color(0xFF1565C0),
@@ -32,6 +32,22 @@ const Map<Difficulty, Color> kDifficultyAccents = {
   Difficulty.veryHard: Color(0xFF6A1B9A),
 };
 
-/// The accent colour of [difficulty].
-Color accentColorFor(Difficulty difficulty) =>
-    kDifficultyAccents[difficulty] ?? const Color(0xFF3F51B5);
+/// The same hues lightened for the dark theme: the light accents would fail
+/// contrast against a near-black surface (digits, titles and buttons).
+const Map<Difficulty, Color> kDifficultyAccentsDark = {
+  Difficulty.easy: Color(0xFF81C784),
+  Difficulty.medium: Color(0xFF64B5F6),
+  Difficulty.hard: Color(0xFFFFB74D),
+  Difficulty.veryHard: Color(0xFFCE93D8),
+};
+
+/// The accent colour of [difficulty] for [brightness].
+Color accentColorFor(
+  Difficulty difficulty, {
+  Brightness brightness = Brightness.light,
+}) {
+  final palette = brightness == Brightness.dark
+      ? kDifficultyAccentsDark
+      : kDifficultyAccents;
+  return palette[difficulty] ?? const Color(0xFF3F51B5);
+}

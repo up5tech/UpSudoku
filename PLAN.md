@@ -2408,6 +2408,16 @@ release manifest has no `INTERNET` permission.
 > a 320×568 screen hands ~65 px back to the square board. Digit buttons scale
 > their digit/count with `FittedBox` only when the buttons get shorter than the
 > natural text, so nothing overflows and normal phones are pixel-identical.
+> **Dark-mode pass** — Home, Settings and the game screen (including the hint
+> panel and the pause overlay) were rendered in Vietnamese at 390×844 and
+> 320×568. The light-theme accents were unreadable on the dark board (pad digits
+> and the difficulty title came out near-invisible), so `accentColorFor` now takes
+> a `Brightness` and the dark theme uses lightened variants
+> (`kDifficultyAccentsDark`); `test/theme_test` checks the contrast ratios.
+> The selected cell in the dark board also uses a blended tint instead of a 45 %
+> accent wash, so the player's digit stays legible, and the hint panel's actions
+> shrink below 360 px wide so a Vietnamese explanation no longer wraps with one
+> orphan word.
 > **Still open:** high-contrast theme, human playtests and the tuning they imply,
 > store screenshots/listing, signing keys (`key.properties` is never committed)
 > and the two-device manual run — the release build has not been produced yet.

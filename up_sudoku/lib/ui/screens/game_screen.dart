@@ -197,7 +197,7 @@ class _GameScreenState extends State<GameScreen> {
       return const Scaffold(body: Center(child: CircularProgressIndicator()));
     }
 
-    final accent = accentColorFor(game.cfg.id);
+    final accent = accentColorFor(game.cfg.id, brightness: theme.brightness);
     final finished =
         game.status == GameStatus.won || game.status == GameStatus.lost;
 

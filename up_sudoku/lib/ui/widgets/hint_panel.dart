@@ -44,57 +44,80 @@ class HintPanel extends StatelessWidget {
     final theme = Theme.of(context);
     final l10n = AppLocalizations.of(context);
 
-    return Card(
-      margin: const EdgeInsets.symmetric(horizontal: 12, vertical: 4),
-      color: theme.colorScheme.secondaryContainer,
-      child: Padding(
-        padding: const EdgeInsets.fromLTRB(12, 8, 4, 8),
-        child: Row(
-          children: [
-            Icon(
-              Icons.lightbulb_outline,
-              color: theme.colorScheme.onSecondaryContainer,
-            ),
-            const SizedBox(width: 10),
-            Expanded(
-              child: Column(
-                crossAxisAlignment: CrossAxisAlignment.start,
-                children: [
-                  Text(
-                    title,
-                    style: theme.textTheme.titleSmall?.copyWith(
-                      color: theme.colorScheme.onSecondaryContainer,
-                      fontWeight: FontWeight.w700,
-                    ),
-                  ),
-                  if (explanation != null)
-                    Padding(
-                      padding: const EdgeInsets.only(top: 2),
-                      child: Text(
-                        explanation!,
-                        style: theme.textTheme.bodySmall?.copyWith(
+    return LayoutBuilder(
+      builder: (context, constraints) {
+        // On a narrow phone the actions would leave the explanation wrapping
+        // with a single orphan word, so they shrink a little there.
+        final compact = constraints.maxWidth < 360;
+        final actionStyle = compact
+            ? TextButton.styleFrom(
+                padding: const EdgeInsets.symmetric(horizontal: 8),
+                visualDensity: VisualDensity.compact,
+                tapTargetSize: MaterialTapTargetSize.shrinkWrap,
+              )
+            : null;
+
+        return Card(
+          margin: const EdgeInsets.symmetric(horizontal: 12, vertical: 4),
+          color: theme.colorScheme.secondaryContainer,
+          child: Padding(
+            padding: const EdgeInsets.fromLTRB(12, 8, 4, 8),
+            child: Row(
+              children: [
+                Icon(
+                  Icons.lightbulb_outline,
+                  color: theme.colorScheme.onSecondaryContainer,
+                ),
+                const SizedBox(width: 10),
+                Expanded(
+                  child: Column(
+                    crossAxisAlignment: CrossAxisAlignment.start,
+                    children: [
+                      Text(
+                        title,
+                        style: theme.textTheme.titleSmall?.copyWith(
                           color: theme.colorScheme.onSecondaryContainer,
+                          fontWeight: FontWeight.w700,
                         ),
                       ),
-                    ),
-                ],
-              ),
+                      if (explanation != null)
+                        Padding(
+                          padding: const EdgeInsets.only(top: 2),
+                          child: Text(
+                            explanation!,
+                            style: theme.textTheme.bodySmall?.copyWith(
+                              color: theme.colorScheme.onSecondaryContainer,
+                            ),
+                          ),
+                        ),
+                    ],
+                  ),
+                ),
+                if (stage == 1)
+                  TextButton(
+                    style: actionStyle,
+                    onPressed: onMore,
+                    child: Text(l10n.showMore),
+                  )
+                else
+                  TextButton(
+                    style: actionStyle,
+                    onPressed: onApply,
+                    child: Text(revealsCell ? l10n.revealCell : l10n.apply),
+                  ),
+                IconButton(
+                  tooltip: l10n.closeHint,
+                  iconSize: compact ? 20 : 24,
+                  visualDensity: compact ? VisualDensity.compact : null,
+                  padding: compact ? EdgeInsets.zero : null,
+                  onPressed: onClose,
+                  icon: const Icon(Icons.close),
+                ),
+              ],
             ),
-            if (stage == 1)
-              TextButton(onPressed: onMore, child: Text(l10n.showMore))
-            else
-              TextButton(
-                onPressed: onApply,
-                child: Text(revealsCell ? l10n.revealCell : l10n.apply),
-              ),
-            IconButton(
-              tooltip: l10n.closeHint,
-              icon: const Icon(Icons.close),
-              onPressed: onClose,
-            ),
-          ],
-        ),
-      ),
+          ),
+        );
+      },
     );
   }
 }
