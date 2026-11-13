@@ -250,7 +250,7 @@ Run `validate_puzzles.dart` whenever the grader or technique order changes — t
 | Phase | Scope | Status |
 |---|---|---|
 | 0 | Setup: project, folders, assets, deps | ✅ |
-| 1 | Core domain: constants, backtracking solver, difficulty config | ☐ |
+| 1 | Core domain: constants, backtracking solver, difficulty config | ✅ |
 | 2 | Generator + tier-1 grader; first Easy pool | ☐ |
 | 3 | Playable prototype on Easy (repo, controller, painter, pad, timer) | ☐ |
 | 4 | Notes, undo/redo, assist rules & feedback modes | ☐ |

@@ -2177,11 +2177,17 @@ release manifest has no `INTERNET` permission.
 
 ### Phase 1 – Core Domain & Tests (2 days)
 
-- [ ] `sudoku_constants.dart` with tests.
-- [ ] Backtracking solver (`countSolutions`, `solve`) with tests, including the example puzzle.
-- [ ] `Difficulty` / `DifficultyConfig`.
+- [x] `sudoku_constants.dart` with tests.
+- [x] Backtracking solver (`countSolutions`, `solve`) with tests, including the example puzzle.
+- [x] `Difficulty` / `DifficultyConfig`.
 
 **Done when:** solver tests are green and uniqueness checks are fast.
+
+> Status: implemented in `lib/domain/` (`sudoku_constants.dart`, `solver.dart`,
+> `models/difficulty.dart`, `models/puzzle_entry.dart`) with
+> `test/constants_test.dart`, `test/solver_test.dart`,
+> `test/difficulty_test.dart`, `test/puzzle_entry_test.dart`.
+> `flutter analyze` clean, `flutter test` green (28 tests).
 
 ### Phase 2 – Generator & Singles Grader (2–3 days)
 

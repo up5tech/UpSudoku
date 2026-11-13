@@ -17,3 +17,5 @@ key.properties
 build/
 .dart_tool/
 .packages
+graft/
+.trail/
