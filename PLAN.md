@@ -2523,6 +2523,9 @@ Run `dart run flutter_launcher_icons`.
   `INTERNET` permission.
 - [x] No leftover debug `print` calls (`avoid_print` is on; the asset generators
   in `up_sudoku/tool/` are command-line scripts, not app code).
+- [x] `dart run tool/check_offline.dart` passes: no direct network dependency,
+  no network call in `lib/`, and no `INTERNET` permission in the source, merged
+  release or compiled release manifest (checked with `aapt2` when available).
 - [x] `ASSETS_LICENSE.md` lists audio/font/icon sources.
 - [ ] `BALANCING.md` records final difficulty numbers, pool sizes and playtest results.
 - [x] Signed APK/AAB built with the release keystore that stays out of the

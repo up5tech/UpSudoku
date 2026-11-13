@@ -232,6 +232,10 @@ dart run tool/generate_puzzles.dart very_hard 150 42
 # Quality gates — MUST pass before any release
 dart run tool/validate_puzzles.dart
 
+# Offline guard — fails on a direct network dependency, a network call in lib/
+# or an INTERNET permission in the source, merged-release or compiled manifest
+dart run tool/check_offline.dart
+
 # Yield + pool distribution report
 dart run tool/measure_yield.dart 30 42
 
