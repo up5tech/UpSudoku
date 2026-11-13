@@ -5,6 +5,7 @@ import 'package:flutter_test/flutter_test.dart';
 import 'package:shared_preferences/shared_preferences.dart';
 import 'package:up_sudoku/controllers/settings_controller.dart';
 import 'package:up_sudoku/data/storage_service.dart';
+import 'package:up_sudoku/domain/logic/technique.dart';
 import 'package:up_sudoku/domain/models/difficulty.dart';
 import 'package:up_sudoku/domain/models/settings.dart';
 import 'package:up_sudoku/l10n/app_localizations.dart';
@@ -66,6 +67,34 @@ void main() {
         expect(strings.difficultiesBody, isNotEmpty);
         expect(strings.scoringBody, isNotEmpty);
         expect(strings.offlineBody, isNotEmpty);
+      }
+    });
+
+    test('every technique has an English and a Vietnamese name', () {
+      expect(en.techniqueName(Technique.nakedSingle), 'Naked Single');
+      expect(vi.techniqueName(Technique.nakedSingle), 'Single trần');
+      expect(vi.techniqueName(Technique.xWing), 'X-Wing');
+
+      for (final technique in Technique.values) {
+        final english = en.techniqueName(technique);
+        final vietnamese = vi.techniqueName(technique);
+        expect(english, isNotEmpty, reason: '${technique.name} in English');
+        expect(vietnamese, isNotEmpty,
+            reason: '${technique.name} in Vietnamese');
+        // A missing translation would fall back to the generic hint label.
+        expect(english, isNot(en.hint), reason: '${technique.name} in English');
+        expect(vietnamese, isNot(vi.hint),
+            reason: '${technique.name} in Vietnamese');
+      }
+
+      // No two techniques may share a name: the headline has to identify the
+      // technique the hint is about.
+      for (final strings in [en, vi]) {
+        final names = {
+          for (final technique in Technique.values)
+            strings.techniqueName(technique),
+        };
+        expect(names.length, Technique.values.length);
       }
     });
 

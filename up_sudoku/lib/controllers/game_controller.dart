@@ -12,7 +12,6 @@ import '../data/storage_service.dart';
 import '../domain/logic/grader.dart';
 import '../domain/logic/logic_state.dart';
 import '../domain/logic/logic_step.dart';
-import '../domain/logic/technique.dart';
 import '../domain/models/cell_change.dart';
 import '../domain/models/daily_record.dart';
 import '../domain/models/difficulty.dart';
@@ -33,9 +32,9 @@ class GameController extends ChangeNotifier {
     PuzzleRepository? repository,
     StorageService? storage,
     StatsController? stats,
-  }) : _repository = repository,
-       _storage = storage,
-       _stats = stats;
+  })  : _repository = repository,
+        _storage = storage,
+        _stats = stats;
 
   final PuzzleRepository? _repository;
   final StorageService? _storage;
@@ -183,9 +182,7 @@ class GameController extends ChangeNotifier {
       return l10n.somethingIsWrong;
     }
     final step = activeHint;
-    return step == null
-        ? l10n.hint
-        : kTechniqueName[step.technique] ?? l10n.hint;
+    return step == null ? l10n.hint : l10n.techniqueName(step.technique);
   }
 
   /// Stage-2 explanation of the active hint; null at stage 1.
@@ -270,8 +267,7 @@ class GameController extends ChangeNotifier {
   }) {
     final replacedUnfinished = _storage?.readGame(difficulty) != null;
     cfg = kDifficulties[difficulty]!;
-    entry =
-        specific ??
+    entry = specific ??
         _repository!.pick(
           difficulty,
           _stats?.of(difficulty).completedIds.toSet() ?? const <int>{},
@@ -536,7 +532,8 @@ class GameController extends ChangeNotifier {
       for (final p in kPeers[i]) {
         if ((notes[p] & bit(digit)) != 0) {
           changes.add(
-            CellChange(p, values[p], values[p], notes[p], notes[p] & ~bit(digit)),
+            CellChange(
+                p, values[p], values[p], notes[p], notes[p] & ~bit(digit)),
           );
         }
       }

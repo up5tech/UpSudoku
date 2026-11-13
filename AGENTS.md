@@ -213,7 +213,7 @@ Required coverage:
 - `grader_test` — determinism; stuck puzzle → tier 4 + `solvedLogically == false` while the backtracking solver still finds its unique solution.
 - `transformer_test` — transformed puzzle still uniquely solvable, transformed solution matches, tier unchanged.
 - `game_controller_test` — digit entry, mistakes per feedback mode, undo/redo restoring digits **and** auto-removed notes, `fillAllNotes` disabled on Hard/Very Hard, hint charges, win flow (stats once, save cleared), one cue per action. Use `SharedPreferences.setMockInitialValues({})`.
-- `localizations_test` — both string tables, parameterized strings, the `Settings.language` JSON round-trip and persistence.
+- `localizations_test` — both string tables, parameterized strings, a name for every `Technique` in both locales (unique within a locale), the `Settings.language` JSON round-trip and persistence.
 - `audio_cue_test` — a home → game → tap → place run plays one `tap` and one `place` cue through an `AudioService` spy.
 - `layout_test` — every screen in Vietnamese at 320×568 with the bundled font, then the game screen on a landscape phone (844×390), a tablet (1024×768) and with `textScaler` 1.5–2.0; a render overflow, a board below its minimum usable square or a control outside the screen fails the test. Add new screens and sizes to it.
 - `theme_test` — WCAG contrast of the light and dark difficulty accents against the board, so a new accent cannot become unreadable in dark mode.

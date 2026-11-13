@@ -1,3 +1,4 @@
+import 'package:flutter/widgets.dart';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:shared_preferences/shared_preferences.dart';
 import 'package:up_sudoku/controllers/game_controller.dart';
@@ -11,18 +12,21 @@ import 'package:up_sudoku/domain/models/difficulty.dart';
 import 'package:up_sudoku/domain/models/puzzle_entry.dart';
 import 'package:up_sudoku/domain/solver.dart';
 import 'package:up_sudoku/domain/sudoku_constants.dart';
+import 'package:up_sudoku/l10n/app_localizations.dart';
 
-const _puzzle = '530070000600195000098000060800060003400803001700020006060000280000419005000080079';
-const _solution = '534678912672195348198342567859761423426853791713924856961537284287419635345286179';
+const _puzzle =
+    '530070000600195000098000060800060003400803001700020006060000280000419005000080079';
+const _solution =
+    '534678912672195348198342567859761423426853791713924856961537284287419635345286179';
 
 PuzzleEntry _entry([Difficulty difficulty = Difficulty.easy]) => PuzzleEntry(
-  id: 1,
-  difficulty: difficulty,
-  puzzle: PuzzleEntry.decode(_puzzle),
-  solution: PuzzleEntry.decode(_solution),
-  givens: 30,
-  score: 40,
-);
+      id: 1,
+      difficulty: difficulty,
+      puzzle: PuzzleEntry.decode(_puzzle),
+      solution: PuzzleEntry.decode(_solution),
+      givens: 30,
+      score: 40,
+    );
 
 /// A Hard pool puzzle whose first logical step is a pointing elimination
 /// (digit 9 from cell 14).
@@ -61,24 +65,24 @@ PuzzleEntry _pointingEntry() {
 }
 
 PuzzleEntry _veryHardEntry() => PuzzleEntry(
-  id: 1,
-  difficulty: Difficulty.veryHard,
-  puzzle: PuzzleEntry.decode(_veryHardPuzzle),
-  solution: PuzzleEntry.decode(_veryHardSolution),
-  givens: 24,
-  score: 158,
-);
+      id: 1,
+      difficulty: Difficulty.veryHard,
+      puzzle: PuzzleEntry.decode(_veryHardPuzzle),
+      solution: PuzzleEntry.decode(_veryHardSolution),
+      givens: 24,
+      score: 158,
+    );
 
 /// A synthetic board no technique applies to (every cell has nine
 /// candidates), i.e. the state in which the reveal fallback is offered.
 PuzzleEntry _stuckEntry() => PuzzleEntry(
-  id: 1,
-  difficulty: Difficulty.veryHard,
-  puzzle: List<int>.filled(kCellCount, 0),
-  solution: PuzzleEntry.decode(_veryHardSolution),
-  givens: 0,
-  score: 158,
-);
+      id: 1,
+      difficulty: Difficulty.veryHard,
+      puzzle: List<int>.filled(kCellCount, 0),
+      solution: PuzzleEntry.decode(_veryHardSolution),
+      givens: 0,
+      score: 158,
+    );
 
 /// An empty peer of [cell], used to place a digit next to a note.
 int _emptyPeer(GameController game, int cell) =>
@@ -91,9 +95,9 @@ int _wrongDigit(GameController game, int cell) {
 }
 
 List<int> _emptyCells(GameController game) => [
-  for (var i = 0; i < kCellCount; i++)
-    if (game.values[i] == 0) i,
-];
+      for (var i = 0; i < kCellCount; i++)
+        if (game.values[i] == 0) i,
+    ];
 
 void main() {
   TestWidgetsFlutterBinding.ensureInitialized();
@@ -463,6 +467,12 @@ void main() {
     expect(game.hintStage, 1);
     expect(game.activeHint, isNotNull);
     expect(game.hintTitle, isNotEmpty);
+    // The headline follows the UI language, not a hard-coded English name.
+    const vi = AppLocalizations(Locale('vi'));
+    game.l10n = vi;
+    expect(game.hintTitle, vi.techniqueName(game.activeHint!.technique));
+    expect(game.hintTitle, isNot(vi.hint));
+    game.l10n = const AppLocalizations(Locale('en'));
     expect(game.hintHighlight, isNotEmpty);
     expect(game.hintExplanation, isNull);
 

@@ -46,24 +46,6 @@ const Map<Technique, int> kTechniqueTier = {
   Technique.xyzWing: 3,
 };
 
-/// Human readable technique names, used by hints.
-const Map<Technique, String> kTechniqueName = {
-  Technique.nakedSingle: 'Naked Single',
-  Technique.hiddenSingle: 'Hidden Single',
-  Technique.nakedPair: 'Naked Pair',
-  Technique.hiddenPair: 'Hidden Pair',
-  Technique.nakedTriple: 'Naked Triple',
-  Technique.hiddenTriple: 'Hidden Triple',
-  Technique.pointing: 'Pointing Pair/Triple',
-  Technique.boxLine: 'Box/Line Reduction',
-  Technique.nakedQuad: 'Naked Quad',
-  Technique.hiddenQuad: 'Hidden Quad',
-  Technique.xWing: 'X-Wing',
-  Technique.swordfish: 'Swordfish',
-  Technique.xyWing: 'XY-Wing',
-  Technique.xyzWing: 'XYZ-Wing',
-};
-
 /// Weighted usage of a technique — the raw material of the `score` field.
 ///
 /// Diagnostic / ordering only: the score never decides the difficulty level.

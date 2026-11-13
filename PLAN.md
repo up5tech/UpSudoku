@@ -2430,6 +2430,11 @@ release manifest has no `INTERNET` permission.
 > 390×844 at 2× text, 320×568 at 1.5×, 844×390 at 1× and 2×, 1024×768 and
 > 768×1024 at 2×, asserting no overflow, a usable board square and a pad that
 > stays on screen.
+> **Localized technique names** — hint headlines used the English names from the
+> domain's `kTechniqueName`, so a Vietnamese hint read "Naked Single". The table
+> moved to `AppLocalizations.techniqueName(Technique)` (the domain layer keeps no
+> display strings and stays Flutter-free), and `localizations_test` requires a
+> unique, non-generic name for every technique in both locales.
 > **Still open:** high-contrast theme, human playtests and the tuning they imply,
 > store screenshots/listing, signing keys (`key.properties` is never committed)
 > and the two-device manual run — the release build has not been produced yet.
