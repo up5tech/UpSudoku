@@ -2420,6 +2420,16 @@ release manifest has no `INTERNET` permission.
 > orphan word. The pause overlay is now painted with the opaque surface colour
 > (§1685 says the board is hidden; at 97 % it was still faintly readable), and
 > both themes were re-checked at 390×844 and 320×568.
+> **Landscape / tablet / large-text pass** — the game screen now switches to a
+> two-pane layout (board + icon toolbar on the left, status and number pad on
+> the right) whenever the body is wider than it is tall, so the board keeps most
+> of a landscape phone's height instead of shrinking to a strip. The toolbar
+> drops its labels (keeping the semantics label and a tooltip) on landscape and
+> when the system font scale is above 1.25, and the pad keeps its buttons close
+> to square and top-aligned in the tall control panel. `layout_test` now walks
+> 390×844 at 2× text, 320×568 at 1.5×, 844×390 at 1× and 2×, 1024×768 and
+> 768×1024 at 2×, asserting no overflow, a usable board square and a pad that
+> stays on screen.
 > **Still open:** high-contrast theme, human playtests and the tuning they imply,
 > store screenshots/listing, signing keys (`key.properties` is never committed)
 > and the two-device manual run — the release build has not been produced yet.

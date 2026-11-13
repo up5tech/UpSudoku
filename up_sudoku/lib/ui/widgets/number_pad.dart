@@ -1,6 +1,8 @@
 /// The 1–9 digit pad with the remaining counts.
 library;
 
+import 'dart:math' as math;
+
 import 'package:flutter/material.dart';
 
 import '../../l10n/app_localizations.dart';
@@ -33,34 +35,41 @@ class NumberPad extends StatelessWidget {
       builder: (context, constraints) {
         const spacing = 6.0;
         final width = (constraints.maxWidth - spacing * 2) / 3;
-        final height = (constraints.maxHeight - spacing * 2) / 3;
+        // A tall column (a tablet's control panel) would stretch the buttons
+        // into letterboxes; keep them close to square and centre the pad.
+        final padHeight = math.min(constraints.maxHeight, constraints.maxWidth);
+        final height = (padHeight - spacing * 2) / 3;
 
-        return Column(
-          children: [
-            for (var row = 0; row < 3; row++) ...[
-              Row(
-                mainAxisAlignment: MainAxisAlignment.center,
-                children: [
-                  for (var col = 0; col < 3; col++)
-                    SizedBox(
-                      width: width,
-                      height: height,
-                      child: Padding(
-                        padding: const EdgeInsets.all(spacing / 2),
-                        child: _DigitButton(
-                          digit: row * 3 + col + 1,
-                          remaining: remaining[row * 3 + col],
-                          accent: accent,
-                          notesMode: notesMode,
-                          onPressed: onDigit,
+        return Align(
+          alignment: Alignment.topCenter,
+          child: Column(
+            mainAxisSize: MainAxisSize.min,
+            children: [
+              for (var row = 0; row < 3; row++) ...[
+                Row(
+                  mainAxisAlignment: MainAxisAlignment.center,
+                  children: [
+                    for (var col = 0; col < 3; col++)
+                      SizedBox(
+                        width: width,
+                        height: height,
+                        child: Padding(
+                          padding: const EdgeInsets.all(spacing / 2),
+                          child: _DigitButton(
+                            digit: row * 3 + col + 1,
+                            remaining: remaining[row * 3 + col],
+                            accent: accent,
+                            notesMode: notesMode,
+                            onPressed: onDigit,
+                          ),
                         ),
                       ),
-                    ),
-                ],
-              ),
-              if (row < 2) const SizedBox(height: spacing),
+                  ],
+                ),
+                if (row < 2) const SizedBox(height: spacing),
+              ],
             ],
-          ],
+          ),
         );
       },
     );
@@ -99,8 +108,8 @@ class _DigitButton extends StatelessWidget {
         color: used
             ? theme.colorScheme.surfaceContainerHighest.withValues(alpha: 0.4)
             : notesMode
-            ? theme.colorScheme.secondaryContainer
-            : theme.colorScheme.surfaceContainerHighest,
+                ? theme.colorScheme.secondaryContainer
+                : theme.colorScheme.surfaceContainerHighest,
         borderRadius: BorderRadius.circular(12),
         child: InkWell(
           borderRadius: BorderRadius.circular(12),

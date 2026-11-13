@@ -123,8 +123,7 @@ class _GameScreenState extends State<GameScreen> {
   void _ensureGame() {
     if (!mounted) return;
     final game = context.read<GameController>();
-    final finished =
-        game.hasGame &&
+    final finished = game.hasGame &&
         (game.status == GameStatus.won || game.status == GameStatus.lost);
     if (game.hasGame && game.cfg.id == widget.difficulty && !finished) return;
 
@@ -227,9 +226,8 @@ class _GameScreenState extends State<GameScreen> {
         ),
         actions: [
           IconButton(
-            tooltip: game.status == GameStatus.paused
-                ? l10n.resume
-                : l10n.pause,
+            tooltip:
+                game.status == GameStatus.paused ? l10n.resume : l10n.pause,
             icon: Icon(
               game.status == GameStatus.paused ? Icons.play_arrow : Icons.pause,
             ),
@@ -245,20 +243,59 @@ class _GameScreenState extends State<GameScreen> {
       ),
       body: Stack(
         children: [
-          // The pad takes about a quarter of the body height, capped at its
-          // design size, so short screens give the extra room to the board
-          // instead of shrinking it to a thumbnail.
           LayoutBuilder(
             builder: (context, constraints) {
+              // A landscape phone or a tablet has plenty of width and little
+              // height: put the board beside the controls so the board keeps
+              // most of the height instead of becoming a thumbnail.
+              final wide = constraints.maxWidth > constraints.maxHeight * 1.2;
+              final textScale = MediaQuery.textScalerOf(context).scale(1);
+              // Labels do not fit under a big system font on a short screen;
+              // the icons keep their semantics label and gain a tooltip.
+              final compactBar =
+                  wide || constraints.maxHeight < 480 || textScale > 1.25;
+              // The pad takes about a quarter of the body height, capped at
+              // its design size, so short screens give the extra room to the
+              // board instead of shrinking it to a thumbnail.
               final padHeight = (constraints.maxHeight * 0.28).clamp(
                 140.0,
                 210.0,
               );
-              return Column(
-                children: [
-                  _StatusRow(cfg: game.cfg, mistakes: game.mistakes),
-                  if (game.hintStage != null)
-                    HintPanel(
+
+              final pad = NumberPad(
+                remaining: [for (var d = 1; d <= 9; d++) game.remaining(d)],
+                onDigit: game.inputDigit,
+                accent: accent,
+                notesMode: game.notesMode,
+              );
+              final toolbar = GameToolbar(
+                compact: compactBar,
+                enabled: game.isPlaying,
+                canUndo: game.canUndo,
+                canRedo: game.canRedo,
+                notesMode: game.notesMode,
+                hintsLeft: game.hintsLeft,
+                checksLeft: game.checksLeft,
+                onUndo: game.undo,
+                onRedo: game.redo,
+                onErase: game.erase,
+                onToggleNotes: game.toggleNotesMode,
+                onHint: game.cfg.hintLimit > 0
+                    ? (game.canAskHint ? game.requestHint : null)
+                    : null,
+                onCheck: game.cfg.checkLimit > 0
+                    ? (game.canCheck ? game.checkBoard : null)
+                    : null,
+                onFillNotes:
+                    game.cfg.allowAutoFillNotes ? game.fillAllNotes : null,
+              );
+              final status = _StatusRow(
+                cfg: game.cfg,
+                mistakes: game.mistakes,
+              );
+              final hint = game.hintStage == null
+                  ? null
+                  : HintPanel(
                       title: game.hintTitle,
                       explanation: game.hintExplanation,
                       stage: game.hintStage!,
@@ -266,42 +303,51 @@ class _GameScreenState extends State<GameScreen> {
                       onMore: game.showHintDetails,
                       onApply: game.applyHint,
                       onClose: game.closeHint,
-                    ),
-                  Expanded(child: const SudokuBoard()),
-                  GameToolbar(
-                    enabled: game.isPlaying,
-                    canUndo: game.canUndo,
-                    canRedo: game.canRedo,
-                    notesMode: game.notesMode,
-                    hintsLeft: game.hintsLeft,
-                    checksLeft: game.checksLeft,
-                    onUndo: game.undo,
-                    onRedo: game.redo,
-                    onErase: game.erase,
-                    onToggleNotes: game.toggleNotesMode,
-                    onHint: game.cfg.hintLimit > 0
-                        ? (game.canAskHint ? game.requestHint : null)
-                        : null,
-                    onCheck: game.cfg.checkLimit > 0
-                        ? (game.canCheck ? game.checkBoard : null)
-                        : null,
-                    onFillNotes: game.cfg.allowAutoFillNotes
-                        ? game.fillAllNotes
-                        : null,
-                  ),
-                  Padding(
-                    padding: const EdgeInsets.fromLTRB(16, 4, 16, 16),
-                    child: SizedBox(
-                      height: padHeight,
-                      child: NumberPad(
-                        remaining: [
-                          for (var d = 1; d <= 9; d++) game.remaining(d),
+                    );
+
+              if (wide) {
+                final controlsWidth = (constraints.maxWidth * 0.42).clamp(
+                  280.0,
+                  420.0,
+                );
+                return Row(
+                  children: [
+                    Expanded(
+                      child: Column(
+                        children: [
+                          const Expanded(child: SudokuBoard()),
+                          toolbar,
                         ],
-                        onDigit: game.inputDigit,
-                        accent: accent,
-                        notesMode: game.notesMode,
                       ),
                     ),
+                    SizedBox(
+                      width: controlsWidth,
+                      child: Column(
+                        children: [
+                          status,
+                          if (hint != null) hint,
+                          Expanded(
+                            child: Padding(
+                              padding: const EdgeInsets.fromLTRB(16, 4, 16, 16),
+                              child: pad,
+                            ),
+                          ),
+                        ],
+                      ),
+                    ),
+                  ],
+                );
+              }
+
+              return Column(
+                children: [
+                  status,
+                  if (hint != null) hint,
+                  const Expanded(child: SudokuBoard()),
+                  toolbar,
+                  Padding(
+                    padding: const EdgeInsets.fromLTRB(16, 4, 16, 16),
+                    child: SizedBox(height: padHeight, child: pad),
                   ),
                 ],
               );
@@ -368,10 +414,13 @@ class _StatusRow extends StatelessWidget {
             color: theme.colorScheme.onSurfaceVariant,
           ),
           const SizedBox(width: 6),
-          Text(
-            label,
-            style: theme.textTheme.labelLarge?.copyWith(
-              color: theme.colorScheme.onSurfaceVariant,
+          Flexible(
+            child: Text(
+              label,
+              textAlign: TextAlign.center,
+              style: theme.textTheme.labelLarge?.copyWith(
+                color: theme.colorScheme.onSurfaceVariant,
+              ),
             ),
           ),
         ],

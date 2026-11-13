@@ -1,5 +1,6 @@
 import 'dart:convert';
 import 'dart:io';
+import 'dart:math' as math;
 
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
@@ -14,6 +15,7 @@ import 'package:up_sudoku/ui/screens/how_to_play_screen.dart';
 import 'package:up_sudoku/ui/screens/settings_screen.dart';
 import 'package:up_sudoku/ui/screens/stats_screen.dart';
 import 'package:up_sudoku/ui/widgets/number_pad.dart';
+import 'package:up_sudoku/ui/widgets/sudoku_board.dart';
 
 /// Test fonts are a fixed-width placeholder by default; loading the real ones
 /// measures the same text the player sees.
@@ -94,5 +96,74 @@ void main() {
     await tester.pump(const Duration(milliseconds: 300));
     expect(tester.takeException(), isNull, reason: 'normal phone');
     expect(tester.getSize(find.byType(NumberPad)).height, 210);
+
+    // Landscape, tablet and large system fonts: the board must keep a usable
+    // square and nothing may overflow or leave the screen.
+    Future<void> checkGameAt(
+      String reason,
+      Size size, {
+      double textScale = 1.0,
+      required double minBoard,
+    }) async {
+      tester.platformDispatcher.textScaleFactorTestValue = textScale;
+      await tester.binding.setSurfaceSize(size);
+      await tester.pump();
+      await tester.pump(const Duration(milliseconds: 300));
+      expect(tester.takeException(), isNull, reason: reason);
+
+      final box = tester.getSize(find.byType(SudokuBoard));
+      final side = math.min(box.width, box.height);
+      expect(side, greaterThanOrEqualTo(minBoard), reason: reason);
+
+      final pad = tester.getRect(find.byType(NumberPad));
+      expect(pad.left, greaterThanOrEqualTo(0), reason: reason);
+      expect(pad.right, lessThanOrEqualTo(size.width + 0.01), reason: reason);
+      expect(pad.bottom, lessThanOrEqualTo(size.height + 0.01), reason: reason);
+      expect(pad.height, greaterThan(60), reason: reason);
+    }
+
+    await checkGameAt(
+      '390x844 at 2x text',
+      const Size(390, 844),
+      textScale: 2,
+      minBoard: 220,
+    );
+    await checkGameAt(
+      '320x568 at 1.5x text',
+      const Size(320, 568),
+      textScale: 1.5,
+      minBoard: 150,
+    );
+    await checkGameAt(
+      'landscape phone 844x390',
+      const Size(844, 390),
+      minBoard: 240,
+    );
+    await checkGameAt(
+      'landscape phone 844x390 at 2x text',
+      const Size(844, 390),
+      textScale: 2,
+      minBoard: 200,
+    );
+    await checkGameAt(
+      'tablet 1024x768',
+      const Size(1024, 768),
+      minBoard: 400,
+    );
+    await checkGameAt(
+      'tablet portrait 768x1024 at 2x text',
+      const Size(768, 1024),
+      textScale: 2,
+      minBoard: 300,
+    );
+
+    // Back to the default text scale: the phone layout is unchanged.
+    tester.platformDispatcher.clearAllTestValues();
+    await checkGameAt(
+      'phone again',
+      const Size(320, 568),
+      minBoard: 180,
+    );
+    expect(tester.getSize(find.byType(NumberPad)).height, lessThan(210));
   });
 }

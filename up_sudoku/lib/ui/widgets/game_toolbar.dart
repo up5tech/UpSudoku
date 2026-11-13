@@ -23,6 +23,7 @@ class GameToolbar extends StatelessWidget {
     this.hintsLeft = 0,
     this.checksLeft = 0,
     this.enabled = true,
+    this.compact = false,
   });
 
   /// Called when the player erases the selected cell.
@@ -64,6 +65,10 @@ class GameToolbar extends StatelessWidget {
   /// Whether the actions are available.
   final bool enabled;
 
+  /// Icons only, for landscape and large system fonts where a label row would
+  /// take height away from the board. The label stays as semantics/tooltip.
+  final bool compact;
+
   @override
   Widget build(BuildContext context) {
     final l10n = AppLocalizations.of(context);
@@ -75,21 +80,25 @@ class GameToolbar extends StatelessWidget {
         _ToolbarButton(
           icon: Icons.undo,
           label: l10n.undo,
+          compact: compact,
           onPressed: enabled && canUndo ? onUndo : null,
         ),
         _ToolbarButton(
           icon: Icons.redo,
           label: l10n.redo,
+          compact: compact,
           onPressed: enabled && canRedo ? onRedo : null,
         ),
         _ToolbarButton(
           icon: Icons.backspace_outlined,
           label: l10n.erase,
+          compact: compact,
           onPressed: enabled ? onErase : null,
         ),
         _ToolbarButton(
           icon: Icons.edit_note,
           label: l10n.notes,
+          compact: compact,
           active: notesMode,
           onPressed: enabled ? onToggleNotes : null,
         ),
@@ -97,18 +106,21 @@ class GameToolbar extends StatelessWidget {
           _ToolbarButton(
             icon: Icons.lightbulb_outline,
             label: l10n.hintWithCount(hintsLeft),
+            compact: compact,
             onPressed: enabled ? onHint : null,
           ),
         if (onCheck != null)
           _ToolbarButton(
             icon: Icons.fact_check_outlined,
             label: l10n.checkWithCount(checksLeft),
+            compact: compact,
             onPressed: enabled ? onCheck : null,
           ),
         if (onFillNotes != null)
           _ToolbarButton(
             icon: Icons.auto_awesome,
             label: l10n.autoNotes,
+            compact: compact,
             onPressed: enabled ? onFillNotes : null,
           ),
       ],
@@ -122,12 +134,14 @@ class _ToolbarButton extends StatelessWidget {
     required this.label,
     required this.onPressed,
     this.active = false,
+    this.compact = false,
   });
 
   final IconData icon;
   final String label;
   final VoidCallback? onPressed;
   final bool active;
+  final bool compact;
 
   @override
   Widget build(BuildContext context) {
@@ -136,38 +150,54 @@ class _ToolbarButton extends StatelessWidget {
     final color = !enabled
         ? theme.disabledColor
         : active
-        ? theme.colorScheme.onSecondaryContainer
-        : theme.colorScheme.onSurface;
+            ? theme.colorScheme.onSecondaryContainer
+            : theme.colorScheme.onSurface;
 
     return Semantics(
       button: true,
       enabled: enabled,
       toggled: active,
       label: label,
-      child: InkWell(
-        onTap: onPressed,
-        borderRadius: BorderRadius.circular(12),
-        child: Container(
-          padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 6),
-          decoration: BoxDecoration(
-            color: active
-                ? theme.colorScheme.secondaryContainer
-                : Colors.transparent,
-            borderRadius: BorderRadius.circular(12),
-          ),
-          child: Column(
-            mainAxisSize: MainAxisSize.min,
-            children: [
-              Icon(icon, size: 22, color: color),
-              const SizedBox(height: 2),
-              Text(
-                label,
-                style: theme.textTheme.labelSmall?.copyWith(color: color),
-              ),
-            ],
+      child: _maybeTooltip(
+        InkWell(
+          onTap: onPressed,
+          borderRadius: BorderRadius.circular(12),
+          child: Container(
+            padding: EdgeInsets.symmetric(
+              horizontal: compact ? 12 : 10,
+              vertical: compact ? 8 : 6,
+            ),
+            decoration: BoxDecoration(
+              color: active
+                  ? theme.colorScheme.secondaryContainer
+                  : Colors.transparent,
+              borderRadius: BorderRadius.circular(12),
+            ),
+            child: Column(
+              mainAxisSize: MainAxisSize.min,
+              children: [
+                Icon(icon, size: 22, color: color),
+                if (!compact) ...[
+                  const SizedBox(height: 2),
+                  Text(
+                    label,
+                    style: theme.textTheme.labelSmall?.copyWith(color: color),
+                  ),
+                ],
+              ],
+            ),
           ),
         ),
       ),
     );
   }
+
+  /// Without a visible label the meaning is only a long press away.
+  Widget _maybeTooltip(Widget child) => compact
+      ? Tooltip(
+          message: label,
+          excludeFromSemantics: true,
+          child: child,
+        )
+      : child;
 }
