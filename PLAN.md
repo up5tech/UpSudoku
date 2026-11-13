@@ -2429,7 +2429,10 @@ release manifest has no `INTERNET` permission.
 > to square and top-aligned in the tall control panel. `layout_test` now walks
 > 390×844 at 2× text, 320×568 at 1.5×, 844×390 at 1× and 2×, 1024×768 and
 > 768×1024 at 2×, asserting no overflow, a usable board square and a pad that
-> stays on screen.
+> stays on screen. With a hint open the panel moves above the board instead of
+> into the control column: in the column it left the pad only 154 px at 2× text
+> (untappable rows), while the board can spare the height, so the landscape hint
+> cases assert both a ≥ 180 px board and a ≥ 200 px pad.
 > **Localized technique names** — hint headlines used the English names from the
 > domain's `kTechniqueName`, so a Vietnamese hint read "Naked Single". The table
 > moved to `AppLocalizations.techniqueName(Technique)` (the domain layer keeps no

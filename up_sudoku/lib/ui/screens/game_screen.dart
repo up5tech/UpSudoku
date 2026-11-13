@@ -310,11 +310,15 @@ class _GameScreenState extends State<GameScreen> {
                   280.0,
                   420.0,
                 );
+                // The hint goes above the board rather than into the control
+                // column: there it would squeeze the pad into untappable rows
+                // on a short screen, while the board can spare the height.
                 return Row(
                   children: [
                     Expanded(
                       child: Column(
                         children: [
+                          if (hint != null) hint,
                           const Expanded(child: SudokuBoard()),
                           toolbar,
                         ],
@@ -325,7 +329,6 @@ class _GameScreenState extends State<GameScreen> {
                       child: Column(
                         children: [
                           status,
-                          if (hint != null) hint,
                           Expanded(
                             child: Padding(
                               padding: const EdgeInsets.fromLTRB(16, 4, 16, 16),

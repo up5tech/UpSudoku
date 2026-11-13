@@ -4,9 +4,11 @@ import 'dart:math' as math;
 
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
+import 'package:provider/provider.dart';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:shared_preferences/shared_preferences.dart';
 import 'package:up_sudoku/app.dart';
+import 'package:up_sudoku/controllers/game_controller.dart';
 import 'package:up_sudoku/data/puzzle_repository.dart';
 import 'package:up_sudoku/data/storage_service.dart';
 import 'package:up_sudoku/domain/models/settings.dart';
@@ -14,6 +16,7 @@ import 'package:up_sudoku/ui/screens/game_screen.dart';
 import 'package:up_sudoku/ui/screens/how_to_play_screen.dart';
 import 'package:up_sudoku/ui/screens/settings_screen.dart';
 import 'package:up_sudoku/ui/screens/stats_screen.dart';
+import 'package:up_sudoku/ui/widgets/hint_panel.dart';
 import 'package:up_sudoku/ui/widgets/number_pad.dart';
 import 'package:up_sudoku/ui/widgets/sudoku_board.dart';
 
@@ -122,6 +125,45 @@ void main() {
       expect(pad.height, greaterThan(60), reason: reason);
     }
 
+    /// The hint panel is the tallest thing that can appear above the board, so
+    /// it is the real worst case for the two-pane layout.
+    Future<void> checkHintAt(
+      String reason,
+      Size size, {
+      double textScale = 1.0,
+      required double minBoard,
+      required double minPad,
+    }) async {
+      tester.platformDispatcher.textScaleFactorTestValue = textScale;
+      await tester.binding.setSurfaceSize(size);
+      await tester.pump();
+      await tester.pump(const Duration(milliseconds: 300));
+
+      final context = tester.element(find.byType(GameScreen));
+      final game = Provider.of<GameController>(context, listen: false);
+      game.requestHint();
+      await tester.pump();
+      await tester.pump(const Duration(milliseconds: 300));
+
+      expect(find.byType(HintPanel), findsOneWidget, reason: reason);
+      expect(tester.takeException(), isNull, reason: reason);
+
+      final box = tester.getSize(find.byType(SudokuBoard));
+      final side = math.min(box.width, box.height);
+      expect(side, greaterThanOrEqualTo(minBoard), reason: reason);
+
+      final panel = tester.getRect(find.byType(HintPanel));
+      expect(panel.height, greaterThan(40), reason: reason);
+      expect(panel.right, lessThanOrEqualTo(size.width + 0.01), reason: reason);
+
+      final pad = tester.getRect(find.byType(NumberPad));
+      expect(pad.height, greaterThanOrEqualTo(minPad), reason: reason);
+      expect(pad.bottom, lessThanOrEqualTo(size.height + 0.01), reason: reason);
+
+      game.closeHint();
+      await tester.pump();
+    }
+
     await checkGameAt(
       '390x844 at 2x text',
       const Size(390, 844),
@@ -144,6 +186,19 @@ void main() {
       const Size(844, 390),
       textScale: 2,
       minBoard: 200,
+    );
+    await checkHintAt(
+      'landscape phone 844x390 with a hint',
+      const Size(844, 390),
+      minBoard: 200,
+      minPad: 200,
+    );
+    await checkHintAt(
+      'landscape phone 844x390 with a hint at 2x text',
+      const Size(844, 390),
+      textScale: 2,
+      minBoard: 180,
+      minPad: 200,
     );
     await checkGameAt(
       'tablet 1024x768',
