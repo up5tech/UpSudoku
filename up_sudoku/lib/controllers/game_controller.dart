@@ -7,6 +7,8 @@ import 'dart:math';
 import 'package:flutter/foundation.dart';
 
 import '../data/puzzle_repository.dart';
+import '../domain/logic/logic_state.dart';
+import '../domain/models/cell_change.dart';
 import '../domain/models/difficulty.dart';
 import '../domain/models/puzzle_entry.dart';
 import '../domain/sudoku_constants.dart';
@@ -14,10 +16,10 @@ import '../domain/sudoku_constants.dart';
 /// Lifecycle of a game.
 enum GameStatus { playing, paused, won, lost }
 
-/// Holds the current game: board, selection, timer and status.
+/// Holds the current game: board, notes, selection, undo history, timer and
+/// status.
 ///
-/// Persistence (phase 7), notes/undo (phase 4) and hints (phase 6) are added
-/// on top of this class.
+/// Persistence (phase 7) and hints (phase 6) are added on top of this class.
 class GameController extends ChangeNotifier {
   GameController({PuzzleRepository? repository}) : _repository = repository;
 
@@ -35,11 +37,17 @@ class GameController extends ChangeNotifier {
   /// Whether a cell is a given (not editable).
   late List<bool> given;
 
-  /// Candidate notes per cell (bitmask); empty in phase 3.
+  /// Candidate notes per cell (bitmask).
   late List<int> notes;
 
   /// Currently selected cell.
   int? selected;
+
+  /// Whether the number pad edits notes instead of placing digits.
+  bool notesMode = false;
+
+  /// Cells marked as wrong by "Check board" (filled in phase 6).
+  final Set<int> flagged = <int>{};
 
   /// Number of wrong digits entered (instant feedback only).
   int mistakes = 0;
@@ -50,9 +58,15 @@ class GameController extends ChangeNotifier {
   /// Lifecycle state.
   GameStatus status = GameStatus.playing;
 
+  /// Neutral message shown when the board is full but not solved.
+  final ValueNotifier<String?> notice = ValueNotifier<String?>(null);
+
   /// Fires every second so the timer widget can repaint without rebuilding
   /// the board.
   final ValueNotifier<int> elapsed = ValueNotifier<int>(0);
+
+  final List<List<CellChange>> _undo = [];
+  final List<List<CellChange>> _redo = [];
 
   Timer? _timer;
 
@@ -63,6 +77,12 @@ class GameController extends ChangeNotifier {
 
   /// True while the player may interact with the board.
   bool get isPlaying => status == GameStatus.playing;
+
+  /// True when there is an action to undo.
+  bool get canUndo => isPlaying && _undo.isNotEmpty;
+
+  /// True when there is an undone action to redo.
+  bool get canRedo => isPlaying && _redo.isNotEmpty;
 
   /// True when the given of [cell] cannot be changed.
   bool isGiven(int cell) => given[cell];
@@ -76,15 +96,19 @@ class GameController extends ChangeNotifier {
   void startGame(Difficulty difficulty, {PuzzleEntry? specific}) {
     cfg = kDifficulties[difficulty]!;
     entry =
-        specific ??
-        _repository!.pick(difficulty, const <int>{}, Random());
+        specific ?? _repository!.pick(difficulty, const <int>{}, Random());
     values = List<int>.of(entry.puzzle);
     given = [for (final v in entry.puzzle) v != 0];
     notes = List<int>.filled(kCellCount, 0);
     selected = null;
+    notesMode = false;
     mistakes = 0;
     elapsedSeconds = 0;
     status = GameStatus.playing;
+    flagged.clear();
+    notice.value = null;
+    _undo.clear();
+    _redo.clear();
     elapsed.value = 0;
     _started = true;
     _startTimer();
@@ -98,29 +122,67 @@ class GameController extends ChangeNotifier {
     notifyListeners();
   }
 
-  /// Enters [digit] in the selected cell.
+  /// Turns notes mode on or off.
+  void toggleNotesMode() {
+    if (!isPlaying) return;
+    notesMode = !notesMode;
+    notifyListeners();
+  }
+
+  /// Enters [digit] in the selected cell, or toggles it as a note in notes
+  /// mode.
   void inputDigit(int digit) {
     final i = selected;
     if (i == null || given[i] || !isPlaying) return;
-    if (values[i] == digit) return; // no-op, never counts twice
-    values[i] = digit;
-    notes[i] = 0;
-    notifyListeners();
-
-    if (digit != entry.solution[i]) {
-      mistakes++;
-      notifyListeners();
+    if (notesMode) {
+      _toggleNote(i, digit);
+    } else {
+      _setValue(i, digit);
     }
-    _checkWin();
   }
 
-  /// Removes the digit of the selected cell.
+  /// Removes the digit or the notes of the selected cell.
   void erase() {
     final i = selected;
     if (i == null || given[i] || !isPlaying) return;
-    if (values[i] == 0) return;
-    values[i] = 0;
+    if (values[i] == 0 && notes[i] == 0) return;
+    _commit([CellChange(i, values[i], 0, notes[i], 0)]);
+  }
+
+  /// Undoes the last action.
+  ///
+  /// The mistake counter is intentionally left untouched (undo abuse is not
+  /// rewarded).
+  void undo() {
+    if (_undo.isEmpty || !isPlaying) return;
+    final action = _undo.removeLast();
+    _apply(action, undo: true);
+    _redo.add(action);
+    notice.value = null;
     notifyListeners();
+  }
+
+  /// Re-applies the last undone action.
+  void redo() {
+    if (_redo.isEmpty || !isPlaying) return;
+    final action = _redo.removeLast();
+    _apply(action, undo: false);
+    _undo.add(action);
+    notice.value = null;
+    notifyListeners();
+    _checkWin();
+  }
+
+  /// Fills every empty cell with its current candidates (Easy/Medium only).
+  void fillAllNotes() {
+    if (!cfg.allowAutoFillNotes || !isPlaying) return;
+    final state = LogicState.fromPuzzle(values);
+    final changes = <CellChange>[
+      for (var i = 0; i < kCellCount; i++)
+        if (values[i] == 0 && notes[i] != state.cand[i])
+          CellChange(i, 0, 0, notes[i], state.cand[i]),
+    ];
+    _commit(changes);
   }
 
   /// Pauses the game: the timer stops and the board is hidden by the UI.
@@ -157,9 +219,70 @@ class GameController extends ChangeNotifier {
     return true;
   }
 
+  void _toggleNote(int i, int digit) {
+    if (values[i] != 0) return; // notes only in empty cells
+    _commit([CellChange(i, 0, 0, notes[i], notes[i] ^ bit(digit))]);
+  }
+
+  void _setValue(int i, int digit) {
+    if (values[i] == digit) return; // no-op, never counts twice
+    final changes = <CellChange>[CellChange(i, values[i], digit, notes[i], 0)];
+    if (cfg.autoRemoveNotes) {
+      for (final p in kPeers[i]) {
+        if ((notes[p] & bit(digit)) != 0) {
+          changes.add(
+            CellChange(p, values[p], values[p], notes[p], notes[p] & ~bit(digit)),
+          );
+        }
+      }
+    }
+    flagged.remove(i);
+    _commit(changes);
+
+    if (digit != entry.solution[i] && cfg.feedback == FeedbackMode.instant) {
+      mistakes++;
+      if (cfg.mistakeLimit > 0 && mistakes >= cfg.mistakeLimit) {
+        _finish(GameStatus.lost);
+        return;
+      }
+      notifyListeners();
+    }
+    _checkWin();
+  }
+
+  void _commit(List<CellChange> changes) {
+    if (changes.isEmpty) return;
+    _apply(changes, undo: false);
+    _undo.add(changes);
+    _redo.clear();
+    notice.value = null;
+    notifyListeners();
+  }
+
+  void _apply(List<CellChange> changes, {required bool undo}) {
+    for (final c in changes) {
+      values[c.cell] = undo ? c.oldValue : c.newValue;
+      notes[c.cell] = undo ? c.oldNotes : c.newNotes;
+    }
+  }
+
   void _checkWin() {
-    if (!isSolved) return;
-    status = GameStatus.won;
+    for (var i = 0; i < kCellCount; i++) {
+      if (values[i] != entry.solution[i]) {
+        // Full board but wrong is only possible with deferred feedback.
+        if (!values.contains(0)) _onFullButWrong();
+        return;
+      }
+    }
+    _finish(GameStatus.won);
+  }
+
+  void _onFullButWrong() {
+    notice.value = 'The board is full but something is still wrong.';
+  }
+
+  void _finish(GameStatus result) {
+    status = result;
     _timer?.cancel();
     _timer = null;
     notifyListeners();
@@ -179,6 +302,7 @@ class GameController extends ChangeNotifier {
     _timer?.cancel();
     _timer = null;
     elapsed.dispose();
+    notice.dispose();
     super.dispose();
   }
 }

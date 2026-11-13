@@ -10,6 +10,7 @@ class NumberPad extends StatelessWidget {
     required this.remaining,
     required this.onDigit,
     required this.accent,
+    this.notesMode = false,
   });
 
   /// Remaining occurrences per digit (index 0 = digit 1).
@@ -20,6 +21,9 @@ class NumberPad extends StatelessWidget {
 
   /// Accent colour of the current difficulty.
   final Color accent;
+
+  /// Whether the pad currently writes notes instead of placing digits.
+  final bool notesMode;
 
   @override
   Widget build(BuildContext context) {
@@ -45,6 +49,7 @@ class NumberPad extends StatelessWidget {
                           digit: row * 3 + col + 1,
                           remaining: remaining[row * 3 + col],
                           accent: accent,
+                          notesMode: notesMode,
                           onPressed: onDigit,
                         ),
                       ),
@@ -65,12 +70,14 @@ class _DigitButton extends StatelessWidget {
     required this.digit,
     required this.remaining,
     required this.accent,
+    required this.notesMode,
     required this.onPressed,
   });
 
   final int digit;
   final int remaining;
   final Color accent;
+  final bool notesMode;
   final ValueChanged<int> onPressed;
 
   @override
@@ -83,10 +90,13 @@ class _DigitButton extends StatelessWidget {
       key: ValueKey('digit-$digit'),
       button: true,
       enabled: !used,
-      label: 'Digit $digit, $remaining remaining',
+      label: 'Digit $digit, $remaining remaining'
+          '${notesMode ? ', note mode' : ''}',
       child: Material(
         color: used
             ? theme.colorScheme.surfaceContainerHighest.withValues(alpha: 0.4)
+            : notesMode
+            ? theme.colorScheme.secondaryContainer
             : theme.colorScheme.surfaceContainerHighest,
         borderRadius: BorderRadius.circular(12),
         child: InkWell(
@@ -100,6 +110,7 @@ class _DigitButton extends StatelessWidget {
                 style: theme.textTheme.headlineSmall?.copyWith(
                   color: color,
                   fontWeight: FontWeight.w700,
+                  fontSize: notesMode ? 20 : null,
                 ),
               ),
               Text(

@@ -9,6 +9,7 @@ import '../../controllers/game_controller.dart';
 import '../../domain/models/difficulty.dart';
 import '../widgets/game_timer.dart';
 import '../widgets/game_toolbar.dart';
+import '../widgets/lose_dialog.dart';
 import '../widgets/number_pad.dart';
 import '../widgets/result_dialog.dart';
 import '../widgets/sudoku_board.dart';
@@ -26,6 +27,7 @@ class GameScreen extends StatefulWidget {
 
 class _GameScreenState extends State<GameScreen> {
   bool _dialogShown = false;
+  GameController? _game;
 
   @override
   void initState() {
@@ -33,24 +35,71 @@ class _GameScreenState extends State<GameScreen> {
     WidgetsBinding.instance.addPostFrameCallback((_) => _ensureGame());
   }
 
+  @override
+  void didChangeDependencies() {
+    super.didChangeDependencies();
+    final game = context.read<GameController>();
+    if (identical(game, _game)) return;
+    _game?.notice.removeListener(_onNotice);
+    _game = game;
+    game.notice.addListener(_onNotice);
+  }
+
+  @override
+  void dispose() {
+    _game?.notice.removeListener(_onNotice);
+    super.dispose();
+  }
+
+  /// Shows the neutral "full but not solved" message without revealing cells.
+  void _onNotice() {
+    final message = _game?.notice.value;
+    if (message == null || !mounted) return;
+    ScaffoldMessenger.maybeOf(
+      context,
+    )?.showSnackBar(SnackBar(content: Text(message)));
+    _game!.notice.value = null;
+  }
+
   /// Starts a game when the screen is entered (or continues the running one).
   void _ensureGame() {
     if (!mounted) return;
     final game = context.read<GameController>();
-    final finished = game.hasGame && game.status == GameStatus.won;
+    final finished =
+        game.hasGame &&
+        (game.status == GameStatus.won || game.status == GameStatus.lost);
     if (!game.hasGame || game.cfg.id != widget.difficulty || finished) {
       game.startGame(widget.difficulty);
     }
   }
 
-  void _onNextPuzzle() {
+  void _startNewPuzzle() {
     final game = context.read<GameController>();
     setState(() => _dialogShown = false);
     game.startGame(widget.difficulty);
   }
 
-  Future<void> _showWinDialog() async {
+  Future<void> _showResultDialog() async {
     final game = context.read<GameController>();
+    if (game.status == GameStatus.lost) {
+      await showDialog<void>(
+        context: context,
+        barrierDismissible: false,
+        builder: (dialogContext) => LoseDialog(
+          mistakeLimit: game.cfg.mistakeLimit,
+          onRetry: () {
+            Navigator.of(dialogContext).pop();
+            _startNewPuzzle();
+          },
+          onHome: () {
+            Navigator.of(dialogContext).pop();
+            Navigator.of(context).pop();
+          },
+        ),
+      );
+      return;
+    }
+
     await showDialog<void>(
       context: context,
       barrierDismissible: false,
@@ -60,7 +109,7 @@ class _GameScreenState extends State<GameScreen> {
         mistakes: game.mistakes,
         onNext: () {
           Navigator.of(dialogContext).pop();
-          _onNextPuzzle();
+          _startNewPuzzle();
         },
         onHome: () {
           Navigator.of(dialogContext).pop();
@@ -80,11 +129,13 @@ class _GameScreenState extends State<GameScreen> {
     }
 
     final accent = accentColorFor(game.cfg.id);
+    final finished =
+        game.status == GameStatus.won || game.status == GameStatus.lost;
 
-    if (game.status == GameStatus.won && !_dialogShown) {
+    if (finished && !_dialogShown) {
       _dialogShown = true;
       WidgetsBinding.instance.addPostFrameCallback((_) {
-        if (mounted) _showWinDialog();
+        if (mounted) _showResultDialog();
       });
     }
 
@@ -118,9 +169,21 @@ class _GameScreenState extends State<GameScreen> {
         children: [
           Column(
             children: [
-              _StatusRow(mistakes: game.mistakes),
+              _StatusRow(cfg: game.cfg, mistakes: game.mistakes),
               Expanded(child: const SudokuBoard()),
-              GameToolbar(onErase: game.erase, enabled: game.isPlaying),
+              GameToolbar(
+                enabled: game.isPlaying,
+                canUndo: game.canUndo,
+                canRedo: game.canRedo,
+                notesMode: game.notesMode,
+                onUndo: game.undo,
+                onRedo: game.redo,
+                onErase: game.erase,
+                onToggleNotes: game.toggleNotesMode,
+                onFillNotes: game.cfg.allowAutoFillNotes
+                    ? game.fillAllNotes
+                    : null,
+              ),
               Padding(
                 padding: const EdgeInsets.fromLTRB(16, 4, 16, 16),
                 child: SizedBox(
@@ -131,6 +194,7 @@ class _GameScreenState extends State<GameScreen> {
                     ],
                     onDigit: game.inputDigit,
                     accent: accent,
+                    notesMode: game.notesMode,
                   ),
                 ),
               ),
@@ -164,13 +228,21 @@ class _GameScreenState extends State<GameScreen> {
 }
 
 class _StatusRow extends StatelessWidget {
-  const _StatusRow({required this.mistakes});
+  const _StatusRow({required this.cfg, required this.mistakes});
 
+  final DifficultyConfig cfg;
   final int mistakes;
 
   @override
   Widget build(BuildContext context) {
     final theme = Theme.of(context);
+    final label = switch (cfg.feedback) {
+      FeedbackMode.instant => cfg.mistakeLimit > 0
+          ? 'Mistakes: $mistakes / ${cfg.mistakeLimit}'
+          : 'Mistakes: $mistakes',
+      FeedbackMode.conflictsOnly => 'Conflicts only',
+      FeedbackMode.none => 'No feedback',
+    };
 
     return Padding(
       padding: const EdgeInsets.symmetric(horizontal: 20, vertical: 8),
@@ -184,7 +256,7 @@ class _StatusRow extends StatelessWidget {
           ),
           const SizedBox(width: 6),
           Text(
-            'Mistakes: $mistakes',
+            label,
             style: theme.textTheme.labelLarge?.copyWith(
               color: theme.colorScheme.onSurfaceVariant,
             ),

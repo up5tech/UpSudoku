@@ -2240,9 +2240,19 @@ release manifest has no `INTERNET` permission.
 
 ### Phase 4 – Notes, Undo/Redo, Assist Rules (2 days)
 
-- [ ] Notes mode, notes rendering, auto-fill and auto-remove notes.
-- [ ] `CellChange` undo/redo.
-- [ ] Feedback modes (`instant`, `conflictsOnly`, `none`), mistakes, lose dialog.
+- [x] Notes mode, notes rendering, auto-fill and auto-remove notes.
+- [x] `CellChange` undo/redo.
+- [x] Feedback modes (`instant`, `conflictsOnly`, `none`), mistakes, lose dialog.
+
+> Implemented in `controllers/game_controller.dart` plus
+> `domain/models/cell_change.dart`; the toolbar now offers Undo / Redo /
+> Erase / Notes / Auto notes (the last one only for Easy and Medium).
+> `flutter analyze` clean, `flutter test` green (81 tests) — including undo
+> restoring auto-removed notes, undo never decrementing the mistake counter,
+> the Medium 5-mistake loss, and `fillAllNotes` being refused on Hard/
+> Very Hard. The "board full but wrong" case shows a neutral snackbar and
+> leaves the game running. Still open: audio/haptics on placement and the
+> `flagged` cells only "Check board" fills (phase 6).
 
 **Done when:** each difficulty's assist rules behave exactly as in section 3.3.
 
